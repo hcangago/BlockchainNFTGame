@@ -1,110 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import CartasABI from './Cartas.json'; // El archivo que acabas de copiar
+import CartasABI from './Cartas.json';
 
-// IMPORTANTE: Pega aquí la dirección que te salió al desplegar el contrato
-const CONTRACT_ADDRESS = "0xCa80fE6853d70919603F221c3c4A7E398f735043"; 
+const CONTRACT_ADDRESS = "0xCa80fE6853d70919603F221c3c4A7E398f735043";
 
 function App() {
   const [cuenta, setCuenta] = useState("");
+  const [cartas, setCartas] = useState([]); // Aquí guardaremos la lista para el .map
   const [cargando, setCargando] = useState(false);
 
-  // 1. Conectar MetaMask (lo que ya tenías)
-  const conectarWallet = async () => {
-  if (window.ethereum) {
-    try {
-      // 1. Pedir las cuentas
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      
-      // 2. Verificar la red (Sepolia es 11155111 en decimal o 0xaa36a7 en hex)
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      
-      if (chainId !== '0xaa36a7') {
-        alert("¡Cuidado! No estás en la red Sepolia. Cambiando de red...");
-        await cambiarARedSepolia(); // La función que te pasé antes
-      }
-      
-      setCuenta(accounts[0]);
-    } catch (error) {
-      console.error("Error al conectar:", error);
-    }
-  } else {
-    alert("Por favor, instala MetaMask");
-  }
-};
-
-  // Función mágica: Llama al contrato para ganar una carta
-  const reclamarCarta = async () => {
-  try {
+  // Función para obtener las cartas del contrato
+  const cargarCartas = async (direccion) => {
     if (!window.ethereum) return;
-    
-    // En v6, Web3Provider cambia a BrowserProvider
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    
-    // Obtenemos el "signer" (quien firma la transacción)
-    const signer = await provider.getSigner();
-    
-    // Creamos la instancia del contrato
-    const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, provider);
 
-    console.log("Llamando al contrato...");
-    
-    // Ejecutamos la función ganarCarta
-    const tx = await contrato.ganarCarta(cuenta);
-    
-    alert("Transacción enviada. Esperando confirmación...");
-    
-    // En v6, esperamos el recibo de la transacción así:
-    await tx.wait(); 
-    
-    alert("¡Felicidades! Carta registrada en la blockchain.");
-  } catch (error) {
-    console.error("Error al reclamar carta:", error);
-    // Si el error dice "resolver name", revisa que CONTRACT_ADDRESS sea correcto
-    alert("Hubo un error. Revisa la consola del navegador.");
-  }
-};
+      // Consultamos cuántas cartas tiene el usuario (balanceOf)
+      const balance = await contrato.balanceOf(direccion);
+      const numCartas = Number(balance);
 
-const cambiarARedSepolia = async () => {
-  const chainIdSepolia = '0xaa36a7'; // ID de Sepolia en hexadecimal
-  try {
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: chainIdSepolia }],
-    });
-  } catch (error) {
-    // Si la red no está agregada en el MetaMask del usuario, la añadimos
-    if (error.code === 4902) {
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [{
-          chainId: chainIdSepolia,
-          chainName: 'Sepolia Test Network',
-          nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 },
-          rpcUrls: ['https://sepolia.infura.io/v3/'], // O tu URL de Alchemy
-          blockExplorerUrls: ['https://sepolia.etherscan.io'],
-        }],
-      });
+      // Creamos una lista de objetos para que React los pinte
+      let listaCartas = [];
+      for (let i = 0; i < numCartas; i++) {
+        listaCartas.push({ id: i + 1 });
+      }
+      setCartas(listaCartas);
+    } catch (error) {
+      console.error("Error cargando cartas:", error);
     }
-  }
-};
+  };
+
+  const conectarWallet = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+
+        if (chainId !== '0xaa36a7') {
+          alert("Cambiando a Sepolia...");
+          await cambiarARedSepolia();
+        }
+
+        setCuenta(accounts[0]);
+        cargarCartas(accounts[0]); // Cargamos cartas nada más conectar
+      } catch (error) {
+        console.error("Error al conectar:", error);
+      }
+    } else {
+      alert("Por favor, instala MetaMask");
+    }
+  };
+
+  const reclamarCarta = async () => {
+    try {
+      if (!window.ethereum) return;
+      setCargando(true);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+
+      const tx = await contrato.ganarCarta(cuenta);
+      await tx.wait();
+
+      alert("¡Carta minteada!");
+      cargarCartas(cuenta); // Recargamos la galería para que aparezca la nueva
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al reclamar");
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const cambiarARedSepolia = async () => {
+    const chainIdSepolia = '0xaa36a7';
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: chainIdSepolia }],
+      });
+    } catch (error) {
+      if (error.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: chainIdSepolia,
+            chainName: 'Sepolia Test Network',
+            nativeCurrency: { name: 'SepoliaETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://sepolia.infura.io/v3/'],
+            blockExplorerUrls: ['https://sepolia.etherscan.io'],
+          }],
+        });
+      }
+    }
+  };
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial' }}>
+    <div style={{ textAlign: 'center', marginTop: '50px', fontFamily: 'Arial', backgroundColor: '#1a1a1a', color: 'white', minHeight: '100vh', padding: '20px' }}>
       <h1>CardChain TFG 🃏</h1>
-      
+
       {!cuenta ? (
         <button onClick={conectarWallet} style={estiloBoton}>
           Conectar MetaMask
         </button>
       ) : (
         <div>
-          <p>Bienvenido: <b>{cuenta.substring(0,6)}...{cuenta.substring(38)}</b></p>
-          
-          <div style={{ marginTop: '30px' }}>
-            <button onClick={reclamarCarta} style={estiloBotonEspecial}>
-              🚀 ¡Abrir sobre de cartas!
-            </button>
+          <p>Wallet: <b>{cuenta.substring(0, 6)}...{cuenta.substring(38)}</b></p>
+          <p>Tienes {cartas.length} cartas en tu colección</p>
+
+          <button onClick={reclamarCarta} style={estiloBotonEspecial} disabled={cargando}>
+            {cargando ? "⏳ Minteando..." : "🚀 ¡Abrir sobre de cartas!"}
+          </button>
+
+          {/* AQUÍ ESTÁ LA GALERÍA QUE FALTABA */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', marginTop: '40px' }}>
+            {cartas.map((carta, index) => (
+              <div key={index} style={estiloCarta}>
+                <img
+                  src={`/assets/cartas/${(index % 5) + 1}.png`}
+                  alt="Carta"
+                  style={{ width: '100%', borderRadius: '10px 10px 0 0' }}
+                />
+                <div style={{ padding: '10px' }}>
+                  <h3 style={{ margin: '5px 0' }}>Bicho #{index + 1}</h3>
+                  <p style={{ fontSize: '12px', color: '#ffd700' }}>NFT Oficial</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -112,23 +135,18 @@ const cambiarARedSepolia = async () => {
   );
 }
 
-// Unos estilos rápidos para que no quede feo
-const estiloBoton = {
-  padding: '10px 20px',
-  fontSize: '16px',
-  cursor: 'pointer',
-  borderRadius: '8px',
-  backgroundColor: '#f3f3f3'
-};
+// Estilos actualizados para la galería
+const estiloBoton = { padding: '10px 20px', fontSize: '16px', cursor: 'pointer', borderRadius: '8px' };
+const estiloBotonEspecial = { padding: '15px 30px', fontSize: '20px', cursor: 'pointer', borderRadius: '12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', fontWeight: 'bold' };
 
-const estiloBotonEspecial = {
-  padding: '15px 30px',
-  fontSize: '20px',
-  cursor: 'pointer',
+const estiloCarta = {
+  width: '180px',
+  margin: '15px',
   borderRadius: '12px',
-  backgroundColor: '#4CAF50',
-  color: 'white',
-  border: 'none'
+  border: '2px solid #ffd700',
+  backgroundColor: '#2c2c2c',
+  boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+  overflow: 'hidden'
 };
 
 export default App;
