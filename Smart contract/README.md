@@ -46,5 +46,3 @@ hardhat.config.js # Configuración de Hardhat y redes
 ## Sincronización con el frontend
 
 Tras compilar o volver a desplegar los contratos, es necesario copiar el ABI y la dirección del contrato a la carpeta `frontend/src/` para que la interfaz web pueda interactuar con ellos.
-
-prueba
