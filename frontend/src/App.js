@@ -10,7 +10,7 @@ import BotonConectar from './components/BotonConectar';
 import GaleriaCartas from './components/GaleriaCartas';
 import DetalleNFT from './components/DetalleNFT';
 
-export const CONTRACT_ADDRESS = "0x5C37aD68657589990000a0d2Da03AEC15756c87E";
+export const CONTRACT_ADDRESS = "0x4441517277Abfd4C6D0a8929b214EEdB6f4680AB";
 export const SEPOLIA_CHAIN_ID = '0xaa36a7';
 export const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
 

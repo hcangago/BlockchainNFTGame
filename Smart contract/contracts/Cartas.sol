@@ -14,7 +14,7 @@ contract Cartas is ERC721Enumerable, Ownable {
     mapping(uint256 => uint256) public bichoAsignado;
 
     constructor() ERC721("EtherBeasts", "EBST") Ownable(msg.sender) {
-        _baseTokenURI = "ipfs://bafybeiedeox4weer35nmt4j2wsqvmdfgc3vhkb4lyaakhmtqs3jzll5jji/";
+        _baseTokenURI = "ipfs://bafybeif7xavsu6hjpt7aabpumtoy44xquzmgou2fkoldwvmop3ik32jbcq/";
     }
 
     function ganarCarta(address jugador) public {

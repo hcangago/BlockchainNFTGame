@@ -7,7 +7,9 @@ Los contratos están escritos en **Solidity 0.8.20** usando el estándar **ERC-7
 ## Requisitos previos
 
 - Node.js 18 o superior
-- Una wallet compatible (MetaMask) con fondos en la red de pruebas configurada
+- Una wallet compatible (MetaMask) con ETH de testnet en la red **Sepolia**
+- Una clave de API de [Alchemy](https://alchemy.com) o [Infura](https://infura.io) para conectarse a Sepolia
+- La clave privada de la wallet configurada como variable de entorno (`PRIVATE_KEY`)
 
 ## Instalación
 
@@ -27,11 +29,8 @@ npx hardhat test
 # Ejecutar tests con informe de gas
 REPORT_GAS=true npx hardhat test
 
-# Levantar un nodo local de Hardhat
-npx hardhat node
-
-# Desplegar en la red local
-npx hardhat run scripts/deploy.js --network localhost
+# Desplegar en la red de pruebas Sepolia
+npx hardhat run scripts/deploy.js --network sepolia
 ```
 
 ## Estructura del proyecto
