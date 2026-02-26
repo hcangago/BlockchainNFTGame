@@ -1,13 +1,48 @@
-# Sample Hardhat Project
+# CardChain – Smart Contracts
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+Contratos inteligentes del juego de cartas coleccionables, desarrollados como Trabajo de Fin de Grado en la Universidad de Oviedo.
 
-Try running some of the following tasks:
+Los contratos están escritos en **Solidity 0.8.20** usando el estándar **ERC-721** de OpenZeppelin para representar las cartas como tokens NFT. El entorno de desarrollo y despliegue utilizado es **Hardhat**.
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
+## Requisitos previos
+
+- Node.js 18 o superior
+- Una wallet compatible (MetaMask) con fondos en la red de pruebas configurada
+
+## Instalación
+
+```bash
+npm install
 ```
+
+## Comandos útiles
+
+```bash
+# Compilar los contratos
+npx hardhat compile
+
+# Ejecutar los tests
+npx hardhat test
+
+# Ejecutar tests con informe de gas
+REPORT_GAS=true npx hardhat test
+
+# Levantar un nodo local de Hardhat
+npx hardhat node
+
+# Desplegar en la red local
+npx hardhat run scripts/deploy.js --network localhost
+```
+
+## Estructura del proyecto
+
+```
+contracts/        # Código fuente de los contratos (.sol)
+scripts/          # Scripts de despliegue
+test/             # Tests automatizados
+hardhat.config.js # Configuración de Hardhat y redes
+```
+
+## Sincronización con el frontend
+
+Tras compilar o volver a desplegar los contratos, es necesario copiar el ABI y la dirección del contrato a la carpeta `frontend/src/` para que la interfaz web pueda interactuar con ellos.
