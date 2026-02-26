@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { ethers } from 'ethers';
 import CartasABI from './Cartas.json';
 import './App.css';
@@ -7,9 +8,40 @@ import './App.css';
 import Toast from './components/Toast';
 import BotonConectar from './components/BotonConectar';
 import GaleriaCartas from './components/GaleriaCartas';
+import DetalleNFT from './components/DetalleNFT';
 
-const CONTRACT_ADDRESS = "0x5C37aD68657589990000a0d2Da03AEC15756c87E";
-const SEPOLIA_CHAIN_ID = '0xaa36a7';
+export const CONTRACT_ADDRESS = "0x5C37aD68657589990000a0d2Da03AEC15756c87E";
+export const SEPOLIA_CHAIN_ID = '0xaa36a7';
+export const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
+
+// Context to share wallet state across routes
+export const WalletContext = createContext(null);
+export const useWallet = () => useContext(WalletContext);
+
+function GaleriaPrincipal({ cartas, reclamarCarta, cargando }) {
+  const { cuenta } = useWallet();
+  return (
+    <>
+      {cuenta && (
+        <>
+          <p className="collection-count">
+            Tienes <strong>{cartas.length}</strong> carta{cartas.length !== 1 ? 's' : ''} en tu colección
+          </p>
+
+          <button
+            className="btn-mint"
+            onClick={reclamarCarta}
+            disabled={cargando}
+          >
+            {cargando ? "⏳ Minteando..." : "🚀 ¡Abrir sobre de cartas!"}
+          </button>
+
+          <GaleriaCartas cartas={cartas} />
+        </>
+      )}
+    </>
+  );
+}
 
 function App() {
   const [cuenta, setCuenta] = useState("");
@@ -159,7 +191,6 @@ function App() {
       await tx.wait();
       mostrarToast("¡Nueva carta obtenida! 🎉", "success");
 
-      // Wait for node sync
       setTimeout(() => cargarCartas(cuenta), 2000);
 
     } catch (error) {
@@ -175,37 +206,35 @@ function App() {
   };
 
   return (
-    <div className="app-container">
-      <h1 className="app-title">EtherBeasts</h1>
+    <WalletContext.Provider value={{ cuenta, mostrarToast }}>
+      <div className="app-container">
+        <h1 className="app-title">EtherBeasts</h1>
 
-      <BotonConectar cuenta={cuenta} onConectar={conectarWallet} onDesconectar={desconectarWallet} />
+        <BotonConectar cuenta={cuenta} onConectar={conectarWallet} onDesconectar={desconectarWallet} />
 
-      {cuenta && (
-        <>
-          <p className="collection-count">
-            Tienes <strong>{cartas.length}</strong> carta{cartas.length !== 1 ? 's' : ''} en tu colección
-          </p>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <GaleriaPrincipal
+                cartas={cartas}
+                reclamarCarta={reclamarCarta}
+                cargando={cargando}
+              />
+            }
+          />
+          <Route path="/nft/:tokenId" element={<DetalleNFT />} />
+        </Routes>
 
-          <button
-            className="btn-mint"
-            onClick={reclamarCarta}
-            disabled={cargando}
-          >
-            {cargando ? "⏳ Minteando..." : "🚀 ¡Abrir sobre de cartas!"}
-          </button>
-
-          <GaleriaCartas cartas={cartas} />
-        </>
-      )}
-
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={cerrarToast}
-        />
-      )}
-    </div>
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={cerrarToast}
+          />
+        )}
+      </div>
+    </WalletContext.Provider>
   );
 }
 

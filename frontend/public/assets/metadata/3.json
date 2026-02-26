@@ -3,7 +3,7 @@
   "description": "Criatura elemental de la coleccion CardChain.",
   "image": "ipfs://bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci/3.png",
   "attributes": [
-    { "trait_type": "Tipo", "value": "Planta" },
-    { "trait_type": "Rareza", "value": "Rara" }
+    { "trait_type": "Tipo", "value": "Fuego" },
+    { "trait_type": "Rareza", "value": "Legendario" }
   ]
 }
