@@ -30,7 +30,7 @@ function formatFecha(timestamp) {
 function DetalleNFT() {
     const { tokenId } = useParams();
     const navigate = useNavigate();
-    const { cuenta } = useWallet();
+    const { cuenta, mostrarToast } = useWallet();
 
     const [nft, setNft] = useState(null);
     const [metadata, setMetadata] = useState(null);
@@ -39,71 +39,130 @@ function DetalleNFT() {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        const cargarDatos = async () => {
-            setCargando(true);
-            setError('');
-            try {
-                if (!window.ethereum) {
-                    throw new Error("MetaMask no detectado");
-                }
+    // Estado para el modal de transferencia
+    const [mostrarModalTransferencia, setMostrarModalTransferencia] = useState(false);
+    const [direccionDestino, setDireccionDestino] = useState('');
+    const [transfiriendo, setTransfiriendo] = useState(false);
 
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, provider);
-
-                // Obtener datos del contrato
-                const bichoId = await contrato.bichoAsignado(tokenId);
-                const owner = await contrato.ownerOf(tokenId);
-
-                setNft({
-                    id: Number(tokenId),
-                    bichoReal: Number(bichoId),
-                });
-                setPropietario(owner.toLowerCase());
-
-                // Obtener metadatos de IPFS
-                try {
-                    const metaUrl = `${METADATA_GATEWAY}/${Number(bichoId)}.json`;
-                    const resp = await fetch(metaUrl);
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        setMetadata(data);
-                    }
-                } catch (metaErr) {
-                    console.warn("No se pudieron cargar metadatos IPFS:", metaErr);
-                }
-
-                // Obtener historial de transferencias (eventos Transfer)
-                try {
-                    const filterTransfer = contrato.filters.Transfer(null, null, tokenId);
-                    const eventos = await contrato.queryFilter(filterTransfer, 0, 'latest');
-                    const transfers = await Promise.all(
-                        eventos.map(async (ev) => {
-                            const block = await provider.getBlock(ev.blockNumber);
-                            return {
-                                de: ev.args[0],
-                                para: ev.args[1],
-                                bloque: ev.blockNumber,
-                                txHash: ev.transactionHash,
-                                timestamp: block?.timestamp ?? 0,
-                            };
-                        })
-                    );
-                    setHistorial(transfers.reverse());
-                } catch (histErr) {
-                    console.warn("No se pudo cargar historial:", histErr);
-                }
-
-            } catch (err) {
-                console.error("Error cargando NFT:", err);
-                setError("No se pudo cargar este NFT. Comprueba que el Token ID es válido.");
-            } finally {
-                setCargando(false);
+    const cargarDatos = async () => {
+        setCargando(true);
+        setError('');
+        try {
+            if (!window.ethereum) {
+                throw new Error("MetaMask no detectado");
             }
-        };
 
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, provider);
+
+            // Obtener datos del contrato
+            const bichoId = await contrato.bichoAsignado(tokenId);
+            const owner = await contrato.ownerOf(tokenId);
+
+            setNft({
+                id: Number(tokenId),
+                bichoReal: Number(bichoId),
+            });
+            setPropietario(owner.toLowerCase());
+
+            // Obtener metadatos de IPFS
+            try {
+                const metaUrl = `${METADATA_GATEWAY}/${Number(bichoId)}.json`;
+                const resp = await fetch(metaUrl);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    setMetadata(data);
+                }
+            } catch (metaErr) {
+                console.warn("No se pudieron cargar metadatos IPFS:", metaErr);
+            }
+
+            // Obtener historial de transferencias (eventos Transfer)
+            try {
+                const filterTransfer = contrato.filters.Transfer(null, null, tokenId);
+                const eventos = await contrato.queryFilter(filterTransfer, 0, 'latest');
+                const transfers = await Promise.all(
+                    eventos.map(async (ev) => {
+                        const block = await provider.getBlock(ev.blockNumber);
+                        return {
+                            de: ev.args[0],
+                            para: ev.args[1],
+                            bloque: ev.blockNumber,
+                            txHash: ev.transactionHash,
+                            timestamp: block?.timestamp ?? 0,
+                        };
+                    })
+                );
+                setHistorial(transfers.reverse());
+            } catch (histErr) {
+                console.warn("No se pudo cargar historial:", histErr);
+            }
+
+        } catch (err) {
+            console.error("Error cargando NFT:", err);
+            setError("No se pudo cargar este NFT. Comprueba que el Token ID es válido.");
+        } finally {
+            setCargando(false);
+        }
+    };
+
+    useEffect(() => {
         cargarDatos();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tokenId]);
+
+    /**
+     * Transferir el NFT a otra dirección usando safeTransferFrom de ERC-721
+     */
+    const transferirNFT = async () => {
+        // Validar dirección
+        if (!ethers.isAddress(direccionDestino)) {
+            mostrarToast("La dirección introducida no es una dirección Ethereum válida.", "error");
+            return;
+        }
+
+        // No transferir a uno mismo
+        if (direccionDestino.toLowerCase() === cuenta.toLowerCase()) {
+            mostrarToast("No puedes transferir el NFT a tu propia dirección.", "error");
+            return;
+        }
+
+        setTransfiriendo(true);
+        mostrarToast("Procesando transferencia...", "info");
+
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+
+            // Llamar a safeTransferFrom(from, to, tokenId)
+            const tx = await contrato['safeTransferFrom(address,address,uint256)'](
+                cuenta,
+                direccionDestino,
+                tokenId
+            );
+
+            mostrarToast("Transacción enviada. Esperando confirmación...", "info");
+            await tx.wait();
+
+            mostrarToast("¡NFT transferido exitosamente! 🎉", "success");
+            setMostrarModalTransferencia(false);
+            setDireccionDestino('');
+
+            // Recargar datos para reflejar el nuevo propietario
+            setTimeout(() => cargarDatos(), 2000);
+
+        } catch (err) {
+            console.error("Error al transferir NFT:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Transferencia cancelada por el usuario.", "error");
+            } else {
+                mostrarToast("Error al transferir el NFT. Inténtalo de nuevo.", "error");
+            }
+        } finally {
+            setTransfiriendo(false);
+        }
+    };
 
     if (cargando) {
         return (
@@ -191,9 +250,11 @@ function DetalleNFT() {
                             <>
                                 <p className="acciones-titulo">🔑 Panel del Propietario</p>
                                 <div className="acciones-grid">
-                                    <button className="btn-accion propietario" disabled>
+                                    <button
+                                        className="btn-accion propietario activo"
+                                        onClick={() => setMostrarModalTransferencia(true)}
+                                    >
                                         📤 Transferir a otro usuario
-                                        <span className="badge-pronto">Próximamente</span>
                                     </button>
                                     <button className="btn-accion propietario" disabled>
                                         🏷️ Listar para Venta
@@ -228,6 +289,50 @@ function DetalleNFT() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Transferencia */}
+            {mostrarModalTransferencia && (
+                <div className="modal-overlay" onClick={() => !transfiriendo && setMostrarModalTransferencia(false)}>
+                    <div className="modal-transferencia" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="modal-titulo">📤 Transferir NFT</h2>
+                        <p className="modal-subtitulo">
+                            Vas a transferir <strong>{nombreNFT}</strong> (Token #{nft.id}) a otra dirección.
+                            Esta acción es irreversible.
+                        </p>
+
+                        <label className="modal-label">Dirección del destinatario</label>
+                        <input
+                            className="modal-input"
+                            type="text"
+                            placeholder="0x..."
+                            value={direccionDestino}
+                            onChange={(e) => setDireccionDestino(e.target.value)}
+                            disabled={transfiriendo}
+                            autoFocus
+                        />
+
+                        <div className="modal-botones">
+                            <button
+                                className="btn-confirmar-transferencia"
+                                onClick={transferirNFT}
+                                disabled={transfiriendo || !direccionDestino.trim()}
+                            >
+                                {transfiriendo ? "⏳ Transfiriendo..." : "✅ Confirmar transferencia"}
+                            </button>
+                            <button
+                                className="btn-cancelar-transferencia"
+                                onClick={() => {
+                                    setMostrarModalTransferencia(false);
+                                    setDireccionDestino('');
+                                }}
+                                disabled={transfiriendo}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Historial de Transferencias */}
             <div className="detalle-historial">

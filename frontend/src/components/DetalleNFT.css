@@ -320,3 +320,166 @@
 .detalle-error {
   color: #ff6b6b;
 }
+
+/* === Botón de acción activo (no disabled) === */
+.btn-accion.propietario.activo {
+  opacity: 1;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  border: 1px solid #ffd700;
+}
+
+.btn-accion.propietario.activo:hover {
+  background: linear-gradient(135deg, #34495e, #4a6580);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-accion.propietario.activo:active {
+  transform: translateY(0);
+}
+
+/* === Modal de Transferencia === */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-transferencia {
+  background: #1e1e2e;
+  border: 1px solid #ffd700;
+  border-radius: 18px;
+  padding: 30px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 10px 50px rgba(255, 215, 0, 0.15);
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-titulo {
+  font-size: 1.4rem;
+  color: #fff;
+  margin: 0 0 10px 0;
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.modal-subtitulo {
+  font-size: 0.9rem;
+  color: #aaa;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.modal-subtitulo strong {
+  color: #ffd700;
+}
+
+.modal-label {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #2c2c3e;
+  border: 1px solid #444;
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.15);
+}
+
+.modal-input::placeholder {
+  color: #555;
+}
+
+.modal-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal-botones {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-confirmar-transferencia {
+  flex: 1;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #ffd700, #f0a500);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-confirmar-transferencia:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-confirmar-transferencia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-cancelar-transferencia {
+  padding: 12px 20px;
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #555;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancelar-transferencia:hover:not(:disabled) {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
+.btn-cancelar-transferencia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
