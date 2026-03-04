@@ -156,11 +156,26 @@
 }
 
 /* Colores por rareza */
-.atributo-badge.rareza-Común { border-color: #aaa; }
-.atributo-badge.rareza-Poco\ Común { border-color: #2ecc71; }
-.atributo-badge.rareza-Raro { border-color: #3498db; }
-.atributo-badge.rareza-Épico { border-color: #9b59b6; }
-.atributo-badge.rareza-Legendario { border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.3); }
+.atributo-badge.rareza-Común {
+  border-color: #aaa;
+}
+
+.atributo-badge.rareza-Poco\ Común {
+  border-color: #2ecc71;
+}
+
+.atributo-badge.rareza-Raro {
+  border-color: #3498db;
+}
+
+.atributo-badge.rareza-Ultra\ Raro {
+  border-color: #9b59b6;
+}
+
+.atributo-badge.rareza-Legendario {
+  border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
 
 /* === Panel de Acciones === */
 .detalle-acciones {
@@ -293,8 +308,13 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .detalle-error {

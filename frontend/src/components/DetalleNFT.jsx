@@ -5,9 +5,9 @@ import { useWallet } from '../App';
 import CartasABI from '../Cartas.json';
 import './DetalleNFT.css';
 
-const CONTRACT_ADDRESS = "0x5C37aD68657589990000a0d2Da03AEC15756c87E";
+const CONTRACT_ADDRESS = "0x4441517277Abfd4C6D0a8929b214EEdB6f4680AB";
 const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
-const METADATA_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeiedeox4weer35nmt4j2wsqvmdfgc3vhkb4lyaakhmtqs3jzll5jji';
+const METADATA_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeif7xavsu6hjpt7aabpumtoy44xquzmgou2fkoldwvmop3ik32jbcq';
 
 /**
  * Truncate an Ethereum address for display
