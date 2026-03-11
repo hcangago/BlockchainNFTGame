@@ -2,24 +2,39 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-    // 1. Ruta de donde Hardhat guarda el resultado de la compilación
-    const abiPath = path.resolve(__dirname, "..", "artifacts/contracts/Cartas.sol/Cartas.json");
+    // Directorio del frontend
+    const frontendSrc = path.resolve(__dirname, "..", "..", "frontend", "src");
 
-    // 2. Ruta de tu carpeta src de React
-    const frontendPath = path.resolve(__dirname, "..", "..", "frontend", "src", "Cartas.json");
+    // Archivos a sincronizar: [origen en artifacts, nombre destino]
+    const archivos = [
+        {
+            origen: path.resolve(__dirname, "..", "artifacts/contracts/Cartas.sol/Cartas.json"),
+            destino: path.join(frontendSrc, "Cartas.json"),
+            nombre: "Cartas"
+        },
+        {
+            origen: path.resolve(__dirname, "..", "artifacts/contracts/Marketplace.sol/Marketplace.json"),
+            destino: path.join(frontendSrc, "Marketplace.json"),
+            nombre: "Marketplace"
+        }
+    ];
 
-    if (!fs.existsSync(abiPath)) {
-        console.log("❌ No se encontró el archivo en artifacts. ¡Compila primero!");
-        return;
+    let exitos = 0;
+    for (const archivo of archivos) {
+        if (!fs.existsSync(archivo.origen)) {
+            console.log(`⚠️  ${archivo.nombre}.json no encontrado en artifacts. ¿Has compilado?`);
+            continue;
+        }
+
+        const contenido = fs.readFileSync(archivo.origen, "utf8");
+        fs.writeFileSync(archivo.destino, contenido);
+        console.log(`✅ ${archivo.nombre}.json actualizado en src/`);
+        exitos++;
     }
 
-    // 3. Leemos el archivo original
-    const abiFile = fs.readFileSync(abiPath, "utf8");
-
-    // 4. Lo escribimos en la carpeta src
-    fs.writeFileSync(frontendPath, abiFile);
-
-    console.log("✅ Cartas.json actualizado correctamente en src/");
+    if (exitos === 0) {
+        console.log("❌ No se actualizó ningún archivo. ¡Compila primero!");
+    }
 }
 
 main()
