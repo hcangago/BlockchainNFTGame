@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
 
 /**
- * Individual NFT card component
- * @param {object} carta - Card data { id, bichoReal, uri }
+ * Componente de carta NFT individual
+ * @param {object} carta - Datos de la carta { id, bichoReal, uri }
  */
 function CartaNFT({ carta }) {
     const imagenUrl = `${IPFS_GATEWAY}/${carta.bichoReal}.png`;

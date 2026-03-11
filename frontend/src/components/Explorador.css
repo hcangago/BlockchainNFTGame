@@ -1,0 +1,159 @@
+.explorador-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: left;
+}
+
+.explorador-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.explorador-titulo {
+    font-size: 2.2rem;
+    font-weight: bold;
+    margin: 0 0 8px 0;
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.explorador-subtitulo {
+    color: #888;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.explorador-count {
+    color: #aaa;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.explorador-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.explorador-card {
+    background: #1e1e2e;
+    border: 1px solid #333;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.explorador-card:hover {
+    border-color: #ffd700;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(255, 215, 0, 0.15);
+}
+
+.explorador-card-img-wrap {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #111;
+}
+
+.explorador-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.explorador-card:hover .explorador-card-img {
+    transform: scale(1.05);
+}
+
+.explorador-card-info {
+    padding: 14px 16px;
+}
+
+.explorador-card-nombre {
+    font-size: 15px;
+    font-weight: bold;
+    color: #fff;
+    margin: 0 0 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.explorador-card-token {
+    font-size: 11px;
+    color: #666;
+    font-family: 'Courier New', monospace;
+    margin: 0 0 10px 0;
+}
+
+.explorador-card-precio {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align: center;
+}
+
+.precio-eth {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+.explorador-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #888;
+    font-size: 1.1rem;
+}
+
+.explorador-loading .spinner {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 15px;
+    animation: spin 1s linear infinite;
+}
+
+.explorador-error {
+    text-align: center;
+    padding: 60px 20px;
+    color: #ff6b6b;
+    font-size: 1.1rem;
+}
+
+.explorador-vacio {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.vacio-emoji {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.vacio-texto {
+    font-size: 1.1rem;
+    color: #888;
+    margin-bottom: 6px;
+}
+
+.vacio-hint {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+@media (max-width: 600px) {
+    .explorador-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 14px;
+    }
+
+    .explorador-titulo {
+        font-size: 1.6rem;
+    }
+}

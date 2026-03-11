@@ -4,17 +4,19 @@ import { ethers } from 'ethers';
 import CartasABI from './Cartas.json';
 import './App.css';
 
-// Components
+// Componentes
 import Toast from './components/Toast';
 import BotonConectar from './components/BotonConectar';
 import GaleriaCartas from './components/GaleriaCartas';
 import DetalleNFT from './components/DetalleNFT';
+import Explorador from './components/Explorador';
 
 export const CONTRACT_ADDRESS = "0x4441517277Abfd4C6D0a8929b214EEdB6f4680AB";
+export const MARKETPLACE_ADDRESS = "0x16FD6a0F57Fd4B5B7F61853E59635635D9A02Cf9";
 export const SEPOLIA_CHAIN_ID = '0xaa36a7';
 export const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
 
-// Context to share wallet state across routes
+// Contexto para compartir el estado de la wallet entre rutas
 export const WalletContext = createContext(null);
 export const useWallet = () => useContext(WalletContext);
 
@@ -49,7 +51,7 @@ function App() {
   const [cargando, setCargando] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Show toast notification
+  // Mostrar notificación toast
   const mostrarToast = useCallback((message, type = 'info') => {
     setToast({ message, type });
   }, []);
@@ -58,7 +60,7 @@ function App() {
     setToast(null);
   }, []);
 
-  // Load user's cards from contract
+  // Cargar las cartas del usuario desde el contrato
   const cargarCartas = useCallback(async (direccion) => {
     if (!window.ethereum || !direccion) return;
 
@@ -93,7 +95,7 @@ function App() {
     }
   }, [mostrarToast]);
 
-  // Listen for account changes
+  // Escuchar cambios de cuenta
   useEffect(() => {
     if (!window.ethereum) return;
 
@@ -111,7 +113,7 @@ function App() {
     return () => window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
   }, [cargarCartas]);
 
-  // Switch to Sepolia network
+  // Cambiar a la red Sepolia
   const cambiarARedSepolia = async () => {
     try {
       await window.ethereum.request({
@@ -136,7 +138,7 @@ function App() {
     }
   };
 
-  // Connect wallet
+  // Conectar wallet
   const conectarWallet = async () => {
     if (!window.ethereum) {
       mostrarToast("Por favor instala MetaMask para continuar", "error");
@@ -166,14 +168,14 @@ function App() {
     }
   };
 
-  // Disconnect wallet
+  // Desconectar wallet
   const desconectarWallet = () => {
     setCuenta("");
     setCartas([]);
     mostrarToast("Wallet desconectada", "info");
   };
 
-  // Claim new card
+  // Reclamar nueva carta
   const reclamarCarta = async () => {
     if (!window.ethereum || !cuenta) return;
 
@@ -210,6 +212,8 @@ function App() {
       <div className="app-container">
         <h1 className="app-title">EtherBeasts</h1>
 
+        <a href="/marketplace" className="btn-marketplace-link">🏪 Explorar Marketplace</a>
+
         <BotonConectar cuenta={cuenta} onConectar={conectarWallet} onDesconectar={desconectarWallet} />
 
         <Routes>
@@ -224,6 +228,7 @@ function App() {
             }
           />
           <Route path="/nft/:tokenId" element={<DetalleNFT />} />
+          <Route path="/marketplace" element={<Explorador />} />
         </Routes>
 
         {toast && (

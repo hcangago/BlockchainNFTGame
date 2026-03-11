@@ -2,11 +2,11 @@ import React, { useEffect } from 'react';
 import './Toast.css';
 
 /**
- * Toast notification component
- * @param {string} message - Message to display
+ * Componente de notificación toast
+ * @param {string} message - Mensaje a mostrar
  * @param {string} type - 'success' | 'error' | 'info'
- * @param {function} onClose - Callback when toast closes
- * @param {number} duration - Auto-dismiss duration in ms (default: 5000)
+ * @param {function} onClose - Callback al cerrar el toast
+ * @param {number} duration - Duración de auto-cierre en ms (por defecto: 5000)
  */
 function Toast({ message, type = 'info', onClose, duration = 5000 }) {
     useEffect(() => {

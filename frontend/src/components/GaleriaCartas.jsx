@@ -2,8 +2,8 @@ import React from 'react';
 import CartaNFT from './CartaNFT';
 
 /**
- * Component that show the gallery of NFT cards
- * @param {array} cartas - Array of nft cards
+ * Componente que muestra la galería de cartas NFT
+ * @param {array} cartas - Array de cartas NFT
  */
 function GaleriaCartas({ cartas }) {
     if (cartas.length === 0) {

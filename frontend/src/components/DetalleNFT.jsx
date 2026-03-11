@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
-import { useWallet } from '../App';
+import { useWallet, CONTRACT_ADDRESS, MARKETPLACE_ADDRESS, IPFS_GATEWAY } from '../App';
 import CartasABI from '../Cartas.json';
+import MarketplaceABI from '../Marketplace.json';
 import './DetalleNFT.css';
 
-const CONTRACT_ADDRESS = "0x4441517277Abfd4C6D0a8929b214EEdB6f4680AB";
-const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
 const METADATA_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeif7xavsu6hjpt7aabpumtoy44xquzmgou2fkoldwvmop3ik32jbcq';
 
 /**
- * Truncate an Ethereum address for display
+ * Truncar una dirección Ethereum para mostrar
  */
 function truncarAddress(addr) {
     if (!addr) return '';
@@ -18,7 +17,7 @@ function truncarAddress(addr) {
 }
 
 /**
- * Format a timestamp to a readable date
+ * Formatear un timestamp a una fecha legible
  */
 function formatFecha(timestamp) {
     return new Date(timestamp * 1000).toLocaleDateString('es-ES', {
@@ -43,6 +42,12 @@ function DetalleNFT() {
     const [mostrarModalTransferencia, setMostrarModalTransferencia] = useState(false);
     const [direccionDestino, setDireccionDestino] = useState('');
     const [transfiriendo, setTransfiriendo] = useState(false);
+
+    // Estado para el marketplace
+    const [listado, setListado] = useState(null); // { vendedor, precio, activo }
+    const [mostrarModalListar, setMostrarModalListar] = useState(false);
+    const [precioVenta, setPrecioVenta] = useState('');
+    const [procesandoMarketplace, setProcesandoMarketplace] = useState(false);
 
     const cargarDatos = async () => {
         setCargando(true);
@@ -98,6 +103,25 @@ function DetalleNFT() {
                 console.warn("No se pudo cargar historial:", histErr);
             }
 
+            // Obtener estado del marketplace
+            try {
+                const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, provider);
+                const [vendedorL, precioL, activoL] = await marketplace.obtenerListado(tokenId);
+                if (activoL) {
+                    setListado({
+                        vendedor: vendedorL.toLowerCase(),
+                        precio: ethers.formatEther(precioL),
+                        precioWei: precioL,
+                        activo: true
+                    });
+                } else {
+                    setListado(null);
+                }
+            } catch (mktErr) {
+                console.warn("No se pudo consultar el marketplace:", mktErr);
+                setListado(null);
+            }
+
         } catch (err) {
             console.error("Error cargando NFT:", err);
             setError("No se pudo cargar este NFT. Comprueba que el Token ID es válido.");
@@ -135,7 +159,7 @@ function DetalleNFT() {
             const signer = await provider.getSigner();
             const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
 
-            // Llamar a safeTransferFrom(from, to, tokenId)
+            // Llamar a safeTransferFrom(de, para, tokenId)
             const tx = await contrato['safeTransferFrom(address,address,uint256)'](
                 cuenta,
                 direccionDestino,
@@ -161,6 +185,112 @@ function DetalleNFT() {
             }
         } finally {
             setTransfiriendo(false);
+        }
+    };
+
+    /**
+     * Listar NFT en el marketplace
+     */
+    const listarEnMarketplace = async () => {
+        if (!precioVenta || isNaN(precioVenta) || Number(precioVenta) <= 0) {
+            mostrarToast("Introduce un precio válido en ETH.", "error");
+            return;
+        }
+
+        setProcesandoMarketplace(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            // Paso 1: Aprobar al marketplace para mover este NFT
+            mostrarToast("Paso 1/2: Aprobando al marketplace...", "info");
+            const txApprove = await contrato.approve(MARKETPLACE_ADDRESS, tokenId);
+            await txApprove.wait();
+
+            // Paso 2: Listar el NFT
+            mostrarToast("Paso 2/2: Listando NFT en el marketplace...", "info");
+            const precioWei = ethers.parseEther(precioVenta);
+            const txListar = await marketplace.listarNFT(tokenId, precioWei);
+            await txListar.wait();
+
+            mostrarToast("¡NFT listado exitosamente! 🏷️", "success");
+            setMostrarModalListar(false);
+            setPrecioVenta('');
+            setTimeout(() => cargarDatos(), 2000);
+
+        } catch (err) {
+            console.error("Error al listar:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Operación cancelada por el usuario.", "error");
+            } else {
+                mostrarToast("Error al listar el NFT. Inténtalo de nuevo.", "error");
+            }
+        } finally {
+            setProcesandoMarketplace(false);
+        }
+    };
+
+    /**
+     * Cancelar un listado activo
+     */
+    const cancelarListado = async () => {
+        setProcesandoMarketplace(true);
+        mostrarToast("Cancelando listado...", "info");
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            const tx = await marketplace.cancelarListado(tokenId);
+            await tx.wait();
+
+            mostrarToast("Listado cancelado. ❌", "success");
+            setTimeout(() => cargarDatos(), 2000);
+
+        } catch (err) {
+            console.error("Error al cancelar listado:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Operación cancelada por el usuario.", "error");
+            } else {
+                mostrarToast("Error al cancelar el listado.", "error");
+            }
+        } finally {
+            setProcesandoMarketplace(false);
+        }
+    };
+
+    /**
+     * Comprar un NFT listado
+     */
+    const comprarNFT = async () => {
+        if (!listado || !listado.activo) return;
+
+        setProcesandoMarketplace(true);
+        mostrarToast("Procesando compra...", "info");
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            const tx = await marketplace.comprarNFT(tokenId, {
+                value: listado.precioWei
+            });
+            await tx.wait();
+
+            mostrarToast("¡NFT comprado exitosamente! 🎉", "success");
+            setTimeout(() => cargarDatos(), 2000);
+
+        } catch (err) {
+            console.error("Error al comprar:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Compra cancelada por el usuario.", "error");
+            } else {
+                mostrarToast("Error al comprar el NFT. Inténtalo de nuevo.", "error");
+            }
+        } finally {
+            setProcesandoMarketplace(false);
         }
     };
 
@@ -249,17 +379,42 @@ function DetalleNFT() {
                         {esPropietario ? (
                             <>
                                 <p className="acciones-titulo">🔑 Panel del Propietario</p>
+
+                                {/* Badge de precio si está listado */}
+                                {listado && listado.activo && (
+                                    <div className="listado-activo-badge">
+                                        <p className="listado-label">🏷️ En venta por</p>
+                                        <p className="listado-precio">Ξ {listado.precio} ETH</p>
+                                    </div>
+                                )}
+
                                 <div className="acciones-grid">
                                     <button
                                         className="btn-accion propietario activo"
                                         onClick={() => setMostrarModalTransferencia(true)}
+                                        disabled={listado?.activo}
                                     >
                                         📤 Transferir a otro usuario
                                     </button>
-                                    <button className="btn-accion propietario" disabled>
-                                        🏷️ Listar para Venta
-                                        <span className="badge-pronto">Próximamente</span>
-                                    </button>
+
+                                    {listado && listado.activo ? (
+                                        <button
+                                            className="btn-accion propietario activo cancelar"
+                                            onClick={cancelarListado}
+                                            disabled={procesandoMarketplace}
+                                        >
+                                            {procesandoMarketplace ? '⏳ Cancelando...' : '❌ Cancelar listado'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="btn-accion propietario activo"
+                                            onClick={() => setMostrarModalListar(true)}
+                                            disabled={procesandoMarketplace}
+                                        >
+                                            🏷️ Listar para Venta
+                                        </button>
+                                    )}
+
                                     <button className="btn-accion propietario" disabled>
                                         🔨 Iniciar Subasta
                                         <span className="badge-pronto">Próximamente</span>
@@ -269,11 +424,30 @@ function DetalleNFT() {
                         ) : (
                             <>
                                 <p className="acciones-titulo">🛒 Opciones de Adquisición</p>
+
+                                {listado && listado.activo && (
+                                    <div className="listado-activo-badge comprador">
+                                        <p className="listado-label">🏷️ Precio de venta</p>
+                                        <p className="listado-precio">Ξ {listado.precio} ETH</p>
+                                    </div>
+                                )}
+
                                 <div className="acciones-grid">
-                                    <button className="btn-accion comprador" disabled>
-                                        ⚡ Adquisición Inmediata
-                                        <span className="badge-pronto">Próximamente</span>
-                                    </button>
+                                    {listado && listado.activo ? (
+                                        <button
+                                            className="btn-accion comprador activo"
+                                            onClick={comprarNFT}
+                                            disabled={!cuenta || procesandoMarketplace}
+                                        >
+                                            {procesandoMarketplace
+                                                ? '⏳ Comprando...'
+                                                : `⚡ Comprar por ${listado.precio} ETH`}
+                                        </button>
+                                    ) : (
+                                        <button className="btn-accion comprador" disabled>
+                                            ⚡ No está en venta
+                                        </button>
+                                    )}
                                     <button className="btn-accion comprador" disabled>
                                         💬 Enviar Oferta
                                         <span className="badge-pronto">Próximamente</span>
@@ -326,6 +500,52 @@ function DetalleNFT() {
                                     setDireccionDestino('');
                                 }}
                                 disabled={transfiriendo}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Listar para Venta */}
+            {mostrarModalListar && (
+                <div className="modal-overlay" onClick={() => !procesandoMarketplace && setMostrarModalListar(false)}>
+                    <div className="modal-transferencia" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="modal-titulo">🏷️ Listar para Venta</h2>
+                        <p className="modal-subtitulo">
+                            Vas a poner <strong>{nombreNFT}</strong> (Token #{nft.id}) en venta en el marketplace.
+                            Necesitarás aprobar 2 transacciones en MetaMask.
+                        </p>
+
+                        <label className="modal-label">Precio de venta (ETH)</label>
+                        <input
+                            className="modal-input"
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0.05"
+                            value={precioVenta}
+                            onChange={(e) => setPrecioVenta(e.target.value)}
+                            disabled={procesandoMarketplace}
+                            autoFocus
+                        />
+
+                        <div className="modal-botones">
+                            <button
+                                className="btn-confirmar-transferencia"
+                                onClick={listarEnMarketplace}
+                                disabled={procesandoMarketplace || !precioVenta}
+                            >
+                                {procesandoMarketplace ? "⏳ Procesando..." : "🏷️ Listar en Marketplace"}
+                            </button>
+                            <button
+                                className="btn-cancelar-transferencia"
+                                onClick={() => {
+                                    setMostrarModalListar(false);
+                                    setPrecioVenta('');
+                                }}
+                                disabled={procesandoMarketplace}
                             >
                                 Cancelar
                             </button>

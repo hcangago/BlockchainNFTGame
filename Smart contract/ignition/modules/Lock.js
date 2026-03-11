@@ -1,5 +1,5 @@
-// This setup uses Hardhat Ignition to manage smart contract deployments.
-// Learn more about it at https://hardhat.org/ignition
+// Esta configuración usa Hardhat Ignition para gestionar los despliegues de contratos inteligentes.
+// Aprende más en https://hardhat.org/ignition
 
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 

@@ -356,8 +356,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-transferencia {
@@ -372,8 +377,15 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .modal-titulo {
@@ -482,4 +494,70 @@
 .btn-cancelar-transferencia:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* === Badge de listado activo === */
+.listado-activo-badge {
+  background: linear-gradient(135deg, #1a2a1a, #2d4a2d);
+  border: 1px solid #4CAF50;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.listado-activo-badge.comprador {
+  background: linear-gradient(135deg, #1a1a2e, #2c2c4a);
+  border-color: #ffd700;
+}
+
+.listado-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.listado-precio {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #ffd700;
+  margin: 0;
+}
+
+/* === Botón activo comprador === */
+.btn-accion.comprador.activo {
+  opacity: 1;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1a472a, #2e7d32);
+  border: 1px solid #4CAF50;
+}
+
+.btn-accion.comprador.activo:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2e7d32, #43a047);
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+  transform: translateY(-1px);
+}
+
+/* === Botón cancelar listado === */
+.btn-accion.propietario.activo.cancelar {
+  border-color: #ff6b6b;
+}
+
+.btn-accion.propietario.activo.cancelar:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4a2020, #6b3030);
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.3);
+}
+
+/* === Botón disabled cuando listado === */
+.btn-accion.propietario.activo:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #555;
+}
+
+.btn-accion.propietario.activo:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }

@@ -1,10 +1,10 @@
 import React from 'react';
 
 /**
- * Wallet connection button component
- * @param {string} cuenta - Connected wallet address (empty if not connected)
- * @param {function} onConectar - Callback when connect button is clicked
- * @param {function} onDesconectar - Callback when disconnect button is clicked
+ * Componente de botón de conexión de wallet
+ * @param {string} cuenta - Dirección de wallet conectada (vacía si no está conectada)
+ * @param {function} onConectar - Callback al pulsar el botón de conectar
+ * @param {function} onDesconectar - Callback al pulsar el botón de desconectar
  */
 function BotonConectar({ cuenta, onConectar, onDesconectar }) {
     if (cuenta) {
