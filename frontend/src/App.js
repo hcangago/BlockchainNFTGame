@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import CartasABI from './Cartas.json';
 import './App.css';
@@ -212,7 +212,7 @@ function App() {
       <div className="app-container">
         <h1 className="app-title">EtherBeasts</h1>
 
-        <a href="/marketplace" className="btn-marketplace-link">🏪 Explorar Marketplace</a>
+        <Link to="/marketplace" className="btn-marketplace-link">🏪 Explorar Marketplace</Link>
 
         <BotonConectar cuenta={cuenta} onConectar={conectarWallet} onDesconectar={desconectarWallet} />
 

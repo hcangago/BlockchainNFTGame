@@ -32,6 +32,15 @@ REPORT_GAS=true npx hardhat test
 # Desplegar en la red de pruebas Sepolia
 npx hardhat run scripts/deploy.js --network sepolia
 ```
+## Sincronización con el frontend
+
+Tras compilar o volver a desplegar los contratos, es necesario copiar el ABI y la dirección del contrato a la carpeta `frontend/src/` para que la interfaz web pueda interactuar con ellos.
+
+```bash
+npx hardhat run scripts/updateFrontend.js
+```
+
+Este script copia los archivos `Cartas.json` y `Marketplace.json` (que contienen el ABI de cada contrato) desde la carpeta `artifacts/` al directorio `frontend/src/`.
 
 ## Estructura del proyecto
 
@@ -42,6 +51,3 @@ test/             # Tests automatizados
 hardhat.config.js # Configuración de Hardhat y redes
 ```
 
-## Sincronización con el frontend
-
-Tras compilar o volver a desplegar los contratos, es necesario copiar el ABI y la dirección del contrato a la carpeta `frontend/src/` para que la interfaz web pueda interactuar con ellos.
