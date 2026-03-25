@@ -53,6 +53,9 @@ function DetalleNFT() {
     const [mostrarModalQuemar, setMostrarModalQuemar] = useState(false);
     const [quemando, setQuemando] = useState(false);
 
+    // Estado para mostrar/ocultar historial
+    const [mostrarHistorial, setMostrarHistorial] = useState(true);
+
     const cargarDatos = async () => {
         setCargando(true);
         setError('');
@@ -648,11 +651,24 @@ function DetalleNFT() {
 
             {/* Historial de Transferencias */}
             <div className="detalle-historial">
-                <h2 className="historial-titulo">📜 Historial de Transferencias</h2>
+                <div className="historial-header">
+                    <h2 className="historial-titulo">📜 Historial de Transferencias</h2>
+                    {historial.length > 0 && (
+                        <button 
+                            className="btn-toggle-historial"
+                            onClick={() => setMostrarHistorial(!mostrarHistorial)}
+                            title={mostrarHistorial ? "Ocultar transacciones" : "Mostrar transacciones"}
+                        >
+                            {mostrarHistorial ? 'Ocultar 🔼' : 'Mostrar 🔽'}
+                        </button>
+                    )}
+                </div>
+                
                 {historial.length === 0 ? (
                     <p className="historial-vacio">No se encontró historial de transferencias para este NFT.</p>
                 ) : (
-                    <table className="historial-tabla">
+                    mostrarHistorial && (
+                        <table className="historial-tabla">
                         <thead>
                             <tr>
                                 <th>Evento</th>
@@ -687,6 +703,7 @@ function DetalleNFT() {
                             })}
                         </tbody>
                     </table>
+                    )
                 )}
             </div>
         </div>
