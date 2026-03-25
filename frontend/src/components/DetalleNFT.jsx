@@ -374,21 +374,33 @@ function DetalleNFT() {
                         </div>
                     )}
 
-                    {/* Panel de acciones condicional */}
+                    {/* Panel de acciones — layout unificado */}
                     <div className="detalle-acciones">
-                        {esPropietario ? (
-                            <>
-                                <p className="acciones-titulo">🔑 Panel del Propietario</p>
+                        <p className="acciones-titulo">
+                            {esPropietario ? '🔑 Panel del Propietario' : '🛒 Opciones de Adquisición'}
+                        </p>
 
-                                {/* Badge de precio si está listado */}
-                                {listado && listado.activo && (
-                                    <div className="listado-activo-badge">
-                                        <p className="listado-label">🏷️ En venta por</p>
-                                        <p className="listado-precio">Ξ {listado.precio} ETH</p>
-                                    </div>
-                                )}
+                        {/* Área de precio — siempre reserva espacio */}
+                        <div className="listado-precio-container">
+                            {listado && listado.activo ? (
+                                <div className={`listado-activo-badge ${esPropietario ? '' : 'comprador'}`}>
+                                    <p className="listado-label">
+                                        {esPropietario ? '🏷️ En venta por' : '🏷️ Precio de venta'}
+                                    </p>
+                                    <p className="listado-precio">Ξ {listado.precio} ETH</p>
+                                </div>
+                            ) : (
+                                <div className="listado-activo-badge listado-placeholder">
+                                    <p className="listado-label">🏷️ Estado</p>
+                                    <p className="listado-precio listado-precio-no-venta">No listado</p>
+                                </div>
+                            )}
+                        </div>
 
-                                <div className="acciones-grid">
+                        {/* Grid de botones — siempre 3 botones */}
+                        <div className="acciones-grid">
+                            {esPropietario ? (
+                                <>
                                     <button
                                         className="btn-accion propietario activo"
                                         onClick={() => setMostrarModalTransferencia(true)}
@@ -419,20 +431,9 @@ function DetalleNFT() {
                                         🔨 Iniciar Subasta
                                         <span className="badge-pronto">Próximamente</span>
                                     </button>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <p className="acciones-titulo">🛒 Opciones de Adquisición</p>
-
-                                {listado && listado.activo && (
-                                    <div className="listado-activo-badge comprador">
-                                        <p className="listado-label">🏷️ Precio de venta</p>
-                                        <p className="listado-precio">Ξ {listado.precio} ETH</p>
-                                    </div>
-                                )}
-
-                                <div className="acciones-grid">
+                                </>
+                            ) : (
+                                <>
                                     {listado && listado.activo ? (
                                         <button
                                             className="btn-accion comprador activo"
@@ -448,17 +449,22 @@ function DetalleNFT() {
                                             ⚡ No está en venta
                                         </button>
                                     )}
+
                                     <button className="btn-accion comprador" disabled>
                                         💬 Enviar Oferta
                                         <span className="badge-pronto">Próximamente</span>
                                     </button>
-                                </div>
-                                {!cuenta && (
-                                    <p style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>
-                                        Conecta tu wallet para ver las opciones disponibles.
-                                    </p>
-                                )}
-                            </>
+
+                                    {/* Botón placeholder para igualar altura con panel del propietario */}
+                                    <div className="btn-accion-placeholder" aria-hidden="true"></div>
+                                </>
+                            )}
+                        </div>
+
+                        {!cuenta && (
+                            <p className="acciones-hint-wallet">
+                                Conecta tu wallet para ver las opciones disponibles.
+                            </p>
                         )}
                     </div>
                 </div>

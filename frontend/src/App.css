@@ -26,6 +26,14 @@ body {
   background-clip: text;
 }
 
+.wallet-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 52px;
+  margin-bottom: 20px;
+}
+
 .wallet-info {
   display: inline-flex;
   align-items: center;
@@ -34,7 +42,6 @@ body {
   background: #2c2c2c;
   border-radius: 12px;
   border: 1px solid #444;
-  margin-bottom: 20px;
 }
 
 .wallet-label {

@@ -7,28 +7,28 @@ import React from 'react';
  * @param {function} onDesconectar - Callback al pulsar el botón de desconectar
  */
 function BotonConectar({ cuenta, onConectar, onDesconectar }) {
-    if (cuenta) {
-        return (
-            <div className="wallet-info">
-                <span className="wallet-label">Wallet:</span>
-                <span className="wallet-address">
-                    {cuenta.substring(0, 6)}...{cuenta.substring(38)}
-                </span>
-                <button
-                    className="btn-disconnect"
-                    onClick={onDesconectar}
-                    title="Desconectar wallet"
-                >
-                    ✕
-                </button>
-            </div>
-        );
-    }
-
     return (
-        <button className="btn-connect" onClick={onConectar}>
-            🦊 Conectar Wallet
-        </button>
+        <div className="wallet-container">
+            {cuenta ? (
+                <div className="wallet-info">
+                    <span className="wallet-label">Wallet:</span>
+                    <span className="wallet-address">
+                        {cuenta.substring(0, 6)}...{cuenta.substring(38)}
+                    </span>
+                    <button
+                        className="btn-disconnect"
+                        onClick={onDesconectar}
+                        title="Desconectar wallet"
+                    >
+                        ✕
+                    </button>
+                </div>
+            ) : (
+                <button className="btn-connect" onClick={onConectar}>
+                    🦊 Conectar Wallet
+                </button>
+            )}
+        </div>
     );
 }
 

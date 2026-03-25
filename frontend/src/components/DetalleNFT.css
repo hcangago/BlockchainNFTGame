@@ -183,6 +183,7 @@
   border: 1px solid #444;
   border-radius: 14px;
   padding: 20px;
+  min-height: 290px;
 }
 
 .acciones-titulo {
@@ -193,10 +194,38 @@
   margin-bottom: 14px;
 }
 
+/* Contenedor de precio — siempre reserva espacio */
+.listado-precio-container {
+  min-height: 62px;
+  margin-bottom: 14px;
+}
+
+.listado-activo-badge.listado-placeholder {
+  background: #2a2a2a;
+  border: 1px dashed #444;
+}
+
+.listado-precio-no-venta {
+  font-size: 1rem !important;
+  color: #666 !important;
+}
+
 .acciones-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Placeholder invisible para igualar botones entre paneles */
+.btn-accion-placeholder {
+  height: 46px;
+  visibility: hidden;
+}
+
+.acciones-hint-wallet {
+  font-size: 12px;
+  color: #888;
+  margin-top: 10px;
 }
 
 .btn-accion {
@@ -502,7 +531,6 @@
   border: 1px solid #4CAF50;
   border-radius: 10px;
   padding: 12px 16px;
-  margin-bottom: 14px;
   text-align: center;
 }
 
