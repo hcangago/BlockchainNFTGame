@@ -1,5 +1,5 @@
 .explorador-container {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
     text-align: left;
@@ -26,12 +26,89 @@
     margin: 0;
 }
 
+/* === Panel de Filtros === */
+.filtros-panel {
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.filtros-fila {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.filtro-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filtro-input,
+.filtro-select {
+    background: #12121f;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.filtro-input:focus,
+.filtro-select:focus {
+    border-color: #ffd700;
+}
+
+.filtro-input::placeholder {
+    color: #555;
+}
+
+.filtro-select option {
+    background: #12121f;
+    color: #fff;
+}
+
+.btn-limpiar-filtros {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 18px;
+    background: transparent;
+    border: 1px solid #ff6b6b;
+    border-radius: 8px;
+    color: #ff6b6b;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-limpiar-filtros:hover {
+    background: rgba(255, 107, 107, 0.1);
+}
+
+/* === Contador === */
 .explorador-count {
     color: #aaa;
     font-size: 14px;
     margin-bottom: 20px;
 }
 
+/* === Grid de Cartas === */
 .explorador-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -54,6 +131,7 @@
 }
 
 .explorador-card-img-wrap {
+    position: relative;
     aspect-ratio: 1;
     overflow: hidden;
     background: #111;
@@ -70,6 +148,33 @@
     transform: scale(1.05);
 }
 
+/* === Badges de Estado === */
+.badge-estado {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    backdrop-filter: blur(8px);
+}
+
+.badge-en-venta {
+    background: rgba(255, 215, 0, 0.2);
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    color: #ffd700;
+}
+
+.badge-no-venta {
+    background: rgba(100, 100, 120, 0.3);
+    border: 1px solid rgba(100, 100, 120, 0.5);
+    color: #888;
+}
+
+/* === Info de Carta === */
 .explorador-card-info {
     padding: 14px 16px;
 }
@@ -88,7 +193,13 @@
     font-size: 11px;
     color: #666;
     font-family: 'Courier New', monospace;
-    margin: 0 0 10px 0;
+    margin: 0 0 6px 0;
+}
+
+.explorador-card-owner {
+    font-size: 12px;
+    color: #777;
+    margin: 0;
 }
 
 .explorador-card-precio {
@@ -105,6 +216,7 @@
     color: #ffd700;
 }
 
+/* === Estados de carga/error/vacío === */
 .explorador-loading {
     text-align: center;
     padding: 60px 20px;
@@ -117,6 +229,11 @@
     display: block;
     margin-bottom: 15px;
     animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .explorador-error {
@@ -145,6 +262,17 @@
 .vacio-hint {
     font-size: 0.9rem;
     color: #555;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .filtros-fila {
+        flex-direction: column;
+    }
+
+    .filtro-grupo {
+        min-width: 100%;
+    }
 }
 
 @media (max-width: 600px) {
