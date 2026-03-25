@@ -589,3 +589,56 @@
   transform: none;
   box-shadow: none;
 }
+
+/* === Botón quemar carta === */
+.btn-accion.propietario.activo.quemar {
+  border-color: #ff6b35;
+  background: linear-gradient(135deg, #3a1a0a, #5c2a10);
+}
+
+.btn-accion.propietario.activo.quemar:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5c2a10, #7a3a1a);
+  box-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
+}
+
+/* === Modal de quemar === */
+.modal-titulo-quemar {
+  background: linear-gradient(135deg, #ff6b35, #ff4444) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+.modal-warning-quemar {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid #ff4444;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #ff6b6b;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.btn-confirmar-quemar {
+  flex: 1;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #ff4444, #cc2200);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-confirmar-quemar:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(255, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-confirmar-quemar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

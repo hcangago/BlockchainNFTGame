@@ -11,8 +11,8 @@ import GaleriaCartas from './components/GaleriaCartas';
 import DetalleNFT from './components/DetalleNFT';
 import Explorador from './components/Explorador';
 
-export const CONTRACT_ADDRESS = "0x4441517277Abfd4C6D0a8929b214EEdB6f4680AB";
-export const MARKETPLACE_ADDRESS = "0x16FD6a0F57Fd4B5B7F61853E59635635D9A02Cf9";
+export const CONTRACT_ADDRESS = "0x92ce1f50F2bE281F9943F983f5cFB1c8a1518C6e";
+export const MARKETPLACE_ADDRESS = "0x879A4399727fe12587757cd5848508FEc1b162dB";
 export const SEPOLIA_CHAIN_ID = '0xaa36a7';
 export const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
 
@@ -30,13 +30,17 @@ function GaleriaPrincipal({ cartas, reclamarCarta, cargando }) {
             Tienes <strong>{cartas.length}</strong> carta{cartas.length !== 1 ? 's' : ''} en tu colección
           </p>
 
-          <button
-            className="btn-mint"
-            onClick={reclamarCarta}
-            disabled={cargando}
-          >
-            {cargando ? "⏳ Minteando..." : "🚀 ¡Abrir sobre de cartas!"}
-          </button>
+          <div className="acciones-principales">
+            <Link to="/marketplace" className="btn-marketplace-link">🏪 Explorar Marketplace</Link>
+
+            <button
+              className="btn-mint"
+              onClick={reclamarCarta}
+              disabled={cargando}
+            >
+              {cargando ? "⏳ Minteando..." : "🚀 ¡Abrir sobre de cartas!"}
+            </button>
+          </div>
 
           <GaleriaCartas cartas={cartas} />
         </>
@@ -95,9 +99,24 @@ function App() {
     }
   }, [mostrarToast]);
 
-  // Escuchar cambios de cuenta
+  // Escuchar cambios de cuenta y autoconectar al cargar
   useEffect(() => {
     if (!window.ethereum) return;
+
+    // Verificar si ya hay una cuenta conectada al recargar la página
+    const chequearConexionPrevia = async () => {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          setCuenta(accounts[0]);
+          cargarCartas(accounts[0]);
+        }
+      } catch (error) {
+        console.error("Error al verificar conexión previa:", error);
+      }
+    };
+
+    chequearConexionPrevia();
 
     const handleAccountsChanged = (accounts) => {
       if (accounts.length > 0) {
@@ -211,8 +230,6 @@ function App() {
     <WalletContext.Provider value={{ cuenta, mostrarToast }}>
       <div className="app-container">
         <h1 className="app-title">EtherBeasts</h1>
-
-        <Link to="/marketplace" className="btn-marketplace-link">🏪 Explorar Marketplace</Link>
 
         <BotonConectar cuenta={cuenta} onConectar={conectarWallet} onDesconectar={desconectarWallet} />
 

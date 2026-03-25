@@ -46,4 +46,12 @@ contract Cartas is ERC721Enumerable, Ownable {
     function setBaseURI(string memory nuevaURI) public onlyOwner {
         _baseTokenURI = nuevaURI;
     }
+
+    /// @notice Permite al propietario de un NFT quemarlo permanentemente
+    /// @param tokenId El ID del token a quemar
+    function quemarCarta(uint256 tokenId) public {
+        require(ownerOf(tokenId) == msg.sender, "Solo el propietario puede quemar esta carta");
+        delete bichoAsignado[tokenId];
+        _update(address(0), tokenId, msg.sender);
+    }
 }

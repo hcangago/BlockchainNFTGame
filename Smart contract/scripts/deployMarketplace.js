@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 async function main() {
-    const CARTAS_ADDRESS = "0x4441517277Abfd4C6D0a8929b214EEdB6f4680AB";
+    const CARTAS_ADDRESS = "0x92ce1f50F2bE281F9943F983f5cFB1c8a1518C6e";
 
     const Marketplace = await hre.ethers.getContractFactory("Marketplace");
 

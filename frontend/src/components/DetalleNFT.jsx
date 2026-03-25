@@ -49,6 +49,10 @@ function DetalleNFT() {
     const [precioVenta, setPrecioVenta] = useState('');
     const [procesandoMarketplace, setProcesandoMarketplace] = useState(false);
 
+    // Estado para quemar NFT
+    const [mostrarModalQuemar, setMostrarModalQuemar] = useState(false);
+    const [quemando, setQuemando] = useState(false);
+
     const cargarDatos = async () => {
         setCargando(true);
         setError('');
@@ -233,28 +237,35 @@ function DetalleNFT() {
     };
 
     /**
-     * Cancelar un listado activo
+     * Cancelar un listado activo y revocar permisos (Seguridad)
      */
     const cancelarListado = async () => {
         setProcesandoMarketplace(true);
-        mostrarToast("Cancelando listado...", "info");
         try {
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
+            
+            // 1. Cancelar en Marketplace
+            mostrarToast("Paso 1/2: Cancelando listado...", "info");
             const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+            const txCancelar = await marketplace.cancelarListado(tokenId);
+            await txCancelar.wait();
 
-            const tx = await marketplace.cancelarListado(tokenId);
-            await tx.wait();
+            // 2. Revocar permisos de ERC-721 por seguridad
+            mostrarToast("Paso 2/2: Revocando permisos (Seguridad)...", "info");
+            const contratoCartas = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+            const txRevocar = await contratoCartas.approve(ethers.ZeroAddress, tokenId);
+            await txRevocar.wait();
 
-            mostrarToast("Listado cancelado. ❌", "success");
+            mostrarToast("Listado cancelado y permisos revocados 🛡️", "success");
             setTimeout(() => cargarDatos(), 2000);
 
         } catch (err) {
-            console.error("Error al cancelar listado:", err);
+            console.error("Error al cancelar listado o revocar permisos:", err);
             if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
                 mostrarToast("Operación cancelada por el usuario.", "error");
             } else {
-                mostrarToast("Error al cancelar el listado.", "error");
+                mostrarToast("Error al procesar la cancelación.", "error");
             }
         } finally {
             setProcesandoMarketplace(false);
@@ -291,6 +302,39 @@ function DetalleNFT() {
             }
         } finally {
             setProcesandoMarketplace(false);
+        }
+    };
+
+    /**
+     * Quemar el NFT permanentemente
+     */
+    const quemarNFT = async () => {
+        setQuemando(true);
+        mostrarToast("Procesando quema del NFT...", "info");
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+
+            const tx = await contrato.quemarCarta(tokenId);
+            mostrarToast("Transacción enviada. Esperando confirmación...", "info");
+            await tx.wait();
+
+            mostrarToast("¡NFT quemado permanentemente! 🔥", "success");
+            setMostrarModalQuemar(false);
+
+            // Redirigir a la galería tras quemar
+            setTimeout(() => window.location.href = '/', 1500);
+
+        } catch (err) {
+            console.error("Error al quemar NFT:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Quema cancelada por el usuario.", "error");
+            } else {
+                mostrarToast("Error al quemar el NFT. Inténtalo de nuevo.", "error");
+            }
+        } finally {
+            setQuemando(false);
         }
     };
 
@@ -431,6 +475,14 @@ function DetalleNFT() {
                                         🔨 Iniciar Subasta
                                         <span className="badge-pronto">Próximamente</span>
                                     </button>
+
+                                    <button
+                                        className="btn-accion propietario activo quemar"
+                                        onClick={() => setMostrarModalQuemar(true)}
+                                        disabled={listado?.activo}
+                                    >
+                                        🔥 Quemar Carta
+                                    </button>
                                 </>
                             ) : (
                                 <>
@@ -552,6 +604,40 @@ function DetalleNFT() {
                                     setPrecioVenta('');
                                 }}
                                 disabled={procesandoMarketplace}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Quemar NFT */}
+            {mostrarModalQuemar && (
+                <div className="modal-overlay" onClick={() => !quemando && setMostrarModalQuemar(false)}>
+                    <div className="modal-transferencia" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="modal-titulo modal-titulo-quemar">🔥 Quemar Carta</h2>
+                        <p className="modal-subtitulo">
+                            Vas a <strong>destruir permanentemente</strong> <strong>{nombreNFT}</strong> (Token #{nft.id}).
+                            Esta acción es <strong>irreversible</strong> y el NFT dejará de existir para siempre.
+                        </p>
+
+                        <div className="modal-warning-quemar">
+                            ⚠️ Una vez quemado, este NFT no podrá recuperarse de ninguna forma.
+                        </div>
+
+                        <div className="modal-botones">
+                            <button
+                                className="btn-confirmar-quemar"
+                                onClick={quemarNFT}
+                                disabled={quemando}
+                            >
+                                {quemando ? "⏳ Quemando..." : "🔥 Confirmar quema"}
+                            </button>
+                            <button
+                                className="btn-cancelar-transferencia"
+                                onClick={() => setMostrarModalQuemar(false)}
+                                disabled={quemando}
                             >
                                 Cancelar
                             </button>
