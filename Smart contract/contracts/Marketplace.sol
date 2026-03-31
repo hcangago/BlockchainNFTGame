@@ -47,6 +47,7 @@ contract Marketplace is ReentrancyGuard {
     // Ofertas ETH
     uint256 public nextOfertaETHId;
     mapping(uint256 => OfertaETH) public ofertasETH;
+    mapping(uint256 => uint256[]) private _ofertasETHPorToken; // tokenId => ofertaIds
 
     // Ofertas de Intercambio
     uint256 public nextOfertaIntercambioId;
@@ -128,6 +129,9 @@ contract Marketplace is ReentrancyGuard {
         listado.activo = false;
         _eliminarDeListados(tokenId);
 
+        // Cancelar y devolver ETH de todas las ofertas pendientes sobre este token
+        _cancelarOfertasETHPendientes(tokenId, type(uint256).max);
+
         nftContrato.transferFrom(vendedor, msg.sender, tokenId);
 
         (bool enviado, ) = payable(vendedor).call{value: precio}("");
@@ -159,6 +163,8 @@ contract Marketplace is ReentrancyGuard {
             activa: true
         });
 
+        _ofertasETHPorToken[tokenId].push(ofertaId);
+
         emit OfertaETHCreada(ofertaId, msg.sender, tokenId, msg.value);
     }
 
@@ -187,6 +193,9 @@ contract Marketplace is ReentrancyGuard {
             listados[tokenId].activo = false;
             _eliminarDeListados(tokenId);
         }
+
+        // Cancelar y devolver ETH de todas las OTRAS ofertas pendientes sobre este token
+        _cancelarOfertasETHPendientes(tokenId, ofertaId);
 
         // Transferir NFT al oferente
         nftContrato.transferFrom(msg.sender, oferente, tokenId);
@@ -321,6 +330,8 @@ contract Marketplace is ReentrancyGuard {
                 listados[tokenId].activo = false;
                 _eliminarDeListados(tokenId);
             }
+            // Cancelar ofertas ETH pendientes sobre esta carta
+            _cancelarOfertasETHPendientes(tokenId, type(uint256).max);
             nftContrato.transferFrom(oferente, msg.sender, tokenId);
         }
 
@@ -332,6 +343,8 @@ contract Marketplace is ReentrancyGuard {
                 listados[tokenId].activo = false;
                 _eliminarDeListados(tokenId);
             }
+            // Cancelar ofertas ETH pendientes sobre esta carta
+            _cancelarOfertasETHPendientes(tokenId, type(uint256).max);
             nftContrato.transferFrom(msg.sender, oferente, tokenId);
         }
 
@@ -417,5 +430,25 @@ contract Marketplace is ReentrancyGuard {
 
         _tokensListados.pop();
         delete _indiceToken[tokenId];
+    }
+
+    /// @dev Cancela todas las ofertas ETH activas sobre un token y devuelve el ETH.
+    ///      Excluye la oferta `excepto` (la que se está aceptando). Pasar type(uint256).max para cancelar todas.
+    function _cancelarOfertasETHPendientes(uint256 tokenId, uint256 excepto) private {
+        uint256[] storage ids = _ofertasETHPorToken[tokenId];
+        for (uint256 i = 0; i < ids.length; i++) {
+            uint256 oid = ids[i];
+            if (oid == excepto) continue;
+            OfertaETH storage o = ofertasETH[oid];
+            if (!o.activa) continue;
+
+            o.activa = false;
+            // Devolver ETH al oferente
+            (bool devuelto, ) = payable(o.oferente).call{value: o.montoETH}("");
+            // Si falla la devolución, no revierte toda la tx — el oferente puede reclamar manualmente
+            if (devuelto) {
+                emit OfertaETHCancelada(oid);
+            }
+        }
     }
 }
