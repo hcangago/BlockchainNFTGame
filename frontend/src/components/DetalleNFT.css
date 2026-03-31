@@ -832,3 +832,173 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* === Sección Ofertas dentro del detalle NFT === */
+.detalle-ofertas-seccion {
+  margin-top: 24px;
+}
+
+.ofertas-nft-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.oferta-nft-card {
+  background: #1e1e2e;
+  border: 1px solid #333;
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: all 0.2s;
+}
+
+.oferta-nft-card:hover {
+  border-color: #5b8df8;
+}
+
+.oferta-nft-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.oferta-nft-badge {
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.oferta-nft-badge.eth {
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.oferta-nft-badge.intercambio {
+  background: rgba(91, 141, 248, 0.15);
+  color: #5b8df8;
+  border: 1px solid rgba(91, 141, 248, 0.3);
+}
+
+.oferta-nft-from {
+  font-size: 12px;
+  color: #888;
+}
+
+.oferta-nft-body {
+  margin-bottom: 10px;
+}
+
+.oferta-nft-body.intercambio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oferta-nft-monto {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.oferta-nft-label {
+  font-size: 11px;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.oferta-nft-cartas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.oferta-nft-mini-carta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #12121f;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.oferta-nft-mini-carta:hover {
+  border-color: #5b8df8;
+  background: rgba(91, 141, 248, 0.08);
+}
+
+.oferta-nft-mini-carta img {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.oferta-nft-mini-carta span {
+  font-size: 12px;
+  color: #ccc;
+}
+
+.oferta-nft-acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-oferta-accion {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-oferta-accion.aceptar {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+}
+
+.btn-oferta-accion.aceptar:hover:not(:disabled) {
+  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-oferta-accion.rechazar {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.btn-oferta-accion.rechazar:hover:not(:disabled) {
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-oferta-accion.cancelar {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: #fff;
+}
+
+.btn-oferta-accion.cancelar:hover:not(:disabled) {
+  box-shadow: 0 3px 12px rgba(107, 114, 128, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-oferta-accion:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.oferta-nft-solo-info {
+  font-size: 11px;
+  color: #555;
+  font-style: italic;
+}

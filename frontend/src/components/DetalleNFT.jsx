@@ -65,6 +65,12 @@ function DetalleNFT() {
     // Estado para mostrar/ocultar historial
     const [mostrarHistorial, setMostrarHistorial] = useState(true);
 
+    // Estado para ofertas recibidas sobre este NFT
+    const [ofertasNFT, setOfertasNFT] = useState([]);
+    const [cargandoOfertas, setCargandoOfertas] = useState(false);
+    const [mostrarOfertas, setMostrarOfertas] = useState(true);
+    const [procesandoAccionOferta, setProcesandoAccionOferta] = useState(false);
+
     const cargarDatos = async () => {
         setCargando(true);
         setError('');
@@ -138,11 +144,129 @@ function DetalleNFT() {
                 setListado(null);
             }
 
+            // Cargar ofertas para este NFT
+            await cargarOfertasNFT(provider);
+
         } catch (err) {
             console.error("Error cargando NFT:", err);
             setError("No se pudo cargar este NFT. Comprueba que el Token ID es válido.");
         } finally {
             setCargando(false);
+        }
+    };
+
+    /**
+     * Cargar todas las ofertas (ETH e intercambio) que apuntan a este NFT
+     */
+    const cargarOfertasNFT = async (provider) => {
+        setCargandoOfertas(true);
+        try {
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, provider);
+            const cartas = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, provider);
+            const ofertas = [];
+
+            // Ofertas ETH sobre este token
+            const totalETH = Number(await marketplace.nextOfertaETHId());
+            for (let i = 0; i < totalETH; i++) {
+                const [oferente, tokenIdObj, montoETH, activa] = await marketplace.obtenerOfertaETH(i);
+                if (!activa || Number(tokenIdObj) !== Number(tokenId)) continue;
+                ofertas.push({
+                    id: i,
+                    tipo: 'eth',
+                    oferente,
+                    montoETH: ethers.formatEther(montoETH)
+                });
+            }
+
+            // Ofertas de intercambio que solicitan este token
+            const totalInt = Number(await marketplace.nextOfertaIntercambioId());
+            for (let i = 0; i < totalInt; i++) {
+                const [oferente, destinatario, tokensOfrecidos, tokensSolicitados, activa] =
+                    await marketplace.obtenerOfertaIntercambio(i);
+                if (!activa) continue;
+                const solicita = tokensSolicitados.map(t => Number(t));
+                if (!solicita.includes(Number(tokenId))) continue;
+
+                // Obtener info de las cartas ofrecidas
+                const cartasInfo = await Promise.all(
+                    tokensOfrecidos.map(async (tid) => {
+                        const tNum = Number(tid);
+                        let nombre = `#${tNum}`;
+                        let imagen = '';
+                        try {
+                            const bichoId = Number(await cartas.bichoAsignado(tNum));
+                            imagen = `${IPFS_GATEWAY}/${bichoId}.png`;
+                            const resp = await fetch(`${METADATA_GATEWAY}/${bichoId}.json`);
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                nombre = data.name || nombre;
+                            }
+                        } catch (e) { }
+                        return { tokenId: tNum, nombre, imagen };
+                    })
+                );
+
+                ofertas.push({
+                    id: i,
+                    tipo: 'intercambio',
+                    oferente,
+                    destinatario,
+                    cartasOfrecidas: cartasInfo
+                });
+            }
+
+            setOfertasNFT(ofertas);
+        } catch (err) {
+            console.warn("Error cargando ofertas del NFT:", err);
+        } finally {
+            setCargandoOfertas(false);
+        }
+    };
+
+    /**
+     * Ejecutar acción sobre una oferta (aceptar/rechazar/cancelar)
+     */
+    const ejecutarAccionOferta = async (accion, ofertaId, label) => {
+        setProcesandoAccionOferta(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            // Para aceptar ofertas, necesitamos aprobación
+            if (accion === 'aceptarETH' || accion === 'aceptarIntercambio') {
+                const contratoCartas = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+                const yaAprobado = await contratoCartas.isApprovedForAll(cuenta, MARKETPLACE_ADDRESS);
+                if (!yaAprobado) {
+                    mostrarToast("Paso 1/2: Aprobando para transferencia...", "info");
+                    const txApprove = await contratoCartas.setApprovalForAll(MARKETPLACE_ADDRESS, true);
+                    await txApprove.wait();
+                }
+            }
+
+            mostrarToast(`Procesando: ${label}...`, "info");
+            let tx;
+            switch (accion) {
+                case 'aceptarETH': tx = await marketplace.aceptarOfertaETH(ofertaId); break;
+                case 'rechazarETH': tx = await marketplace.rechazarOfertaETH(ofertaId); break;
+                case 'cancelarETH': tx = await marketplace.cancelarOfertaETH(ofertaId); break;
+                case 'aceptarIntercambio': tx = await marketplace.aceptarOfertaIntercambio(ofertaId); break;
+                case 'rechazarIntercambio': tx = await marketplace.rechazarOfertaIntercambio(ofertaId); break;
+                case 'cancelarIntercambio': tx = await marketplace.cancelarOfertaIntercambio(ofertaId); break;
+                default: throw new Error("Acción desconocida");
+            }
+            await tx.wait();
+            mostrarToast(`✅ ${label} completado.`, "success");
+            cargarDatos(); // Recargar todo
+        } catch (err) {
+            console.error(`Error en ${accion}:`, err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Acción cancelada por el usuario.", "error");
+            } else {
+                mostrarToast(`Error: ${err.reason || err.message || 'Error desconocido'}`, "error");
+            }
+        } finally {
+            setProcesandoAccionOferta(false);
         }
     };
 
@@ -900,6 +1024,113 @@ function DetalleNFT() {
                     </div>
                 </div>
             )}
+
+            {/* Ofertas sobre este NFT */}
+            <div className="detalle-ofertas-seccion">
+                <div className="historial-header">
+                    <h2 className="historial-titulo">💬 Ofertas ({cargandoOfertas ? '...' : ofertasNFT.length})</h2>
+                    {ofertasNFT.length > 0 && (
+                        <button
+                            className="btn-toggle-historial"
+                            onClick={() => setMostrarOfertas(!mostrarOfertas)}
+                        >
+                            {mostrarOfertas ? 'Ocultar 🔼' : 'Mostrar 🔽'}
+                        </button>
+                    )}
+                </div>
+
+                {cargandoOfertas ? (
+                    <p className="historial-vacio">⏳ Cargando ofertas...</p>
+                ) : ofertasNFT.length === 0 ? (
+                    <p className="historial-vacio">No hay ofertas activas para este NFT.</p>
+                ) : (
+                    mostrarOfertas && (
+                        <div className="ofertas-nft-lista">
+                            {ofertasNFT.map((oferta) => {
+                                const esOferente = cuenta && oferta.oferente.toLowerCase() === cuenta.toLowerCase();
+                                const esPropietario = cuenta && propietario === cuenta.toLowerCase();
+
+                                return (
+                                    <div key={`${oferta.tipo}-${oferta.id}`} className="oferta-nft-card">
+                                        <div className="oferta-nft-header">
+                                            <span className={`oferta-nft-badge ${oferta.tipo}`}>
+                                                {oferta.tipo === 'eth' ? '💰 ETH' : '🔄 Intercambio'}
+                                            </span>
+                                            <span className="oferta-nft-from">
+                                                {esOferente ? '📤 Tu oferta' : `de ${truncarAddress(oferta.oferente)}`}
+                                            </span>
+                                        </div>
+
+                                        {oferta.tipo === 'eth' ? (
+                                            <div className="oferta-nft-body">
+                                                <span className="oferta-nft-monto">Ξ {oferta.montoETH} ETH</span>
+                                            </div>
+                                        ) : (
+                                            <div className="oferta-nft-body intercambio">
+                                                <span className="oferta-nft-label">Ofrece:</span>
+                                                <div className="oferta-nft-cartas">
+                                                    {oferta.cartasOfrecidas.map(c => (
+                                                        <div
+                                                            key={c.tokenId}
+                                                            className="oferta-nft-mini-carta"
+                                                            onClick={() => navigate(`/nft/${c.tokenId}`)}
+                                                        >
+                                                            {c.imagen && <img src={c.imagen} alt={c.nombre} />}
+                                                            <span>{c.nombre}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="oferta-nft-acciones">
+                                            {esPropietario && !esOferente && (
+                                                <>
+                                                    <button
+                                                        className="btn-oferta-accion aceptar"
+                                                        onClick={() => ejecutarAccionOferta(
+                                                            oferta.tipo === 'eth' ? 'aceptarETH' : 'aceptarIntercambio',
+                                                            oferta.id, 'Aceptar oferta'
+                                                        )}
+                                                        disabled={procesandoAccionOferta}
+                                                    >
+                                                        ✅ Aceptar
+                                                    </button>
+                                                    <button
+                                                        className="btn-oferta-accion rechazar"
+                                                        onClick={() => ejecutarAccionOferta(
+                                                            oferta.tipo === 'eth' ? 'rechazarETH' : 'rechazarIntercambio',
+                                                            oferta.id, 'Rechazar oferta'
+                                                        )}
+                                                        disabled={procesandoAccionOferta}
+                                                    >
+                                                        ❌ Rechazar
+                                                    </button>
+                                                </>
+                                            )}
+                                            {esOferente && (
+                                                <button
+                                                    className="btn-oferta-accion cancelar"
+                                                    onClick={() => ejecutarAccionOferta(
+                                                        oferta.tipo === 'eth' ? 'cancelarETH' : 'cancelarIntercambio',
+                                                        oferta.id, 'Cancelar oferta'
+                                                    )}
+                                                    disabled={procesandoAccionOferta}
+                                                >
+                                                    🗑️ Cancelar
+                                                </button>
+                                            )}
+                                            {!esPropietario && !esOferente && (
+                                                <span className="oferta-nft-solo-info">Solo visible</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )
+                )}
+            </div>
 
             {/* Historial de Transferencias */}
             <div className="detalle-historial">
