@@ -10,9 +10,10 @@ import BotonConectar from './components/BotonConectar';
 import GaleriaCartas from './components/GaleriaCartas';
 import DetalleNFT from './components/DetalleNFT';
 import Explorador from './components/Explorador';
+import MisOfertas from './components/MisOfertas';
 
 export const CONTRACT_ADDRESS = "0x92ce1f50F2bE281F9943F983f5cFB1c8a1518C6e";
-export const MARKETPLACE_ADDRESS = "0x879A4399727fe12587757cd5848508FEc1b162dB";
+export const MARKETPLACE_ADDRESS = "0x4Fa9F7C9112D60aCaC35b12489e7BFD3Ea79CA3B";
 export const SEPOLIA_CHAIN_ID = '0xaa36a7';
 export const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
 
@@ -32,6 +33,7 @@ function GaleriaPrincipal({ cartas, reclamarCarta, cargando }) {
 
           <div className="acciones-principales">
             <Link to="/marketplace" className="btn-marketplace-link">🏪 Explorar Marketplace</Link>
+            <Link to="/mis-ofertas" className="btn-marketplace-link btn-ofertas-link">💬 Mis Ofertas</Link>
 
             <button
               className="btn-mint"
@@ -246,6 +248,7 @@ function App() {
           />
           <Route path="/nft/:tokenId" element={<DetalleNFT />} />
           <Route path="/marketplace" element={<Explorador />} />
+          <Route path="/mis-ofertas" element={<MisOfertas />} />
         </Routes>
 
         {toast && (

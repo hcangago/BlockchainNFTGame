@@ -127,6 +127,17 @@ body {
   transform: translateY(-2px);
 }
 
+.btn-ofertas-link {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.btn-ofertas-link:hover {
+  background: linear-gradient(135deg, #60a5fa, #818cf8);
+  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5);
+}
+
 .btn-mint {
   padding: 18px 40px;
   font-size: 22px;

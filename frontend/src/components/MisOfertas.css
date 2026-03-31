@@ -1,0 +1,323 @@
+.mis-ofertas-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.ofertas-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.ofertas-titulo {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0 0 6px 0;
+    background: linear-gradient(135deg, #5b8df8, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.ofertas-subtitulo {
+    color: #888;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* === Tabs === */
+.ofertas-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.ofertas-tab {
+    flex: 1;
+    padding: 12px;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    color: #888;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.ofertas-tab.activo {
+    background: linear-gradient(135deg, #1a2a4a, #2a3d6b);
+    border-color: #5b8df8;
+    color: #fff;
+}
+
+.ofertas-tab:hover:not(.activo) {
+    border-color: #555;
+    color: #ccc;
+}
+
+/* === Loading === */
+.ofertas-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #888;
+    font-size: 1.1rem;
+}
+
+.ofertas-loading .spinner {
+    font-size: 2rem;
+    display: inline-block;
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* === Vacío === */
+.ofertas-vacio {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.ofertas-vacio .vacio-emoji {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.ofertas-vacio .vacio-texto {
+    font-size: 1.1rem;
+    color: #888;
+}
+
+/* === Oferta Card === */
+.ofertas-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.oferta-card {
+    background: #1e1e2e;
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 18px;
+    transition: all 0.2s;
+}
+
+.oferta-card:hover {
+    border-color: #5b8df8;
+}
+
+.oferta-card.enviada {
+    border-left: 3px solid #ffd700;
+}
+
+/* === Header === */
+.oferta-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.oferta-badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.oferta-badge.eth {
+    background: rgba(255, 215, 0, 0.15);
+    color: #ffd700;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.oferta-badge.intercambio {
+    background: rgba(91, 141, 248, 0.15);
+    color: #5b8df8;
+    border: 1px solid rgba(91, 141, 248, 0.3);
+}
+
+.oferta-de {
+    font-size: 13px;
+    color: #777;
+}
+
+/* === Body === */
+.oferta-card-body {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.oferta-carta-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.oferta-carta-preview:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.oferta-carta-preview img {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.oferta-carta-preview span {
+    font-size: 14px;
+    color: #ccc;
+    font-weight: 600;
+}
+
+.oferta-monto {
+    margin-left: auto;
+}
+
+.monto-valor {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+/* === Intercambio Body === */
+.intercambio-body {
+    flex-direction: column;
+    gap: 10px;
+}
+
+.intercambio-lado {
+    width: 100%;
+}
+
+.intercambio-label {
+    font-size: 12px;
+    color: #888;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.intercambio-cartas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.intercambio-mini-carta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #12121f;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.intercambio-mini-carta:hover {
+    border-color: #5b8df8;
+    background: rgba(91, 141, 248, 0.1);
+}
+
+.intercambio-mini-carta img {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.intercambio-mini-carta span {
+    font-size: 12px;
+    color: #ccc;
+}
+
+.intercambio-flecha {
+    font-size: 24px;
+    color: #5b8df8;
+    text-align: center;
+    padding: 4px 0;
+}
+
+/* === Acciones === */
+.oferta-card-acciones {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-oferta {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-oferta.aceptar {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+}
+
+.btn-oferta.aceptar:hover:not(:disabled) {
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-oferta.rechazar {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+}
+
+.btn-oferta.rechazar:hover:not(:disabled) {
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-oferta.cancelar {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    color: #fff;
+}
+
+.btn-oferta.cancelar:hover:not(:disabled) {
+    box-shadow: 0 4px 15px rgba(107, 114, 128, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-oferta:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* === Responsive === */
+@media (max-width: 600px) {
+    .oferta-card-body {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .oferta-monto {
+        margin-left: 0;
+    }
+
+    .oferta-card-acciones {
+        flex-direction: column;
+    }
+}

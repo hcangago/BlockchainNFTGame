@@ -53,6 +53,15 @@ function DetalleNFT() {
     const [mostrarModalQuemar, setMostrarModalQuemar] = useState(false);
     const [quemando, setQuemando] = useState(false);
 
+    // Estado para ofertas
+    const [mostrarModalOferta, setMostrarModalOferta] = useState(false);
+    const [tipoOferta, setTipoOferta] = useState('eth'); // 'eth' | 'intercambio'
+    const [montoOfertaETH, setMontoOfertaETH] = useState('');
+    const [procesandoOferta, setProcesandoOferta] = useState(false);
+    const [misCartas, setMisCartas] = useState([]);
+    const [cartasSeleccionadas, setCartasSeleccionadas] = useState([]); // IDs de mis cartas a ofrecer
+    const [cargandoMisCartas, setCargandoMisCartas] = useState(false);
+
     // Estado para mostrar/ocultar historial
     const [mostrarHistorial, setMostrarHistorial] = useState(true);
 
@@ -341,6 +350,145 @@ function DetalleNFT() {
         }
     };
 
+    /**
+     * Cargar las cartas del usuario conectado (para el modal de intercambio)
+     */
+    const cargarMisCartas = async () => {
+        if (!cuenta) return;
+        setCargandoMisCartas(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const contrato = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, provider);
+            const numCartas = Number(await contrato.balanceOf(cuenta));
+            const lista = [];
+            for (let i = 0; i < numCartas; i++) {
+                const tid = Number(await contrato.tokenOfOwnerByIndex(cuenta, i));
+                if (tid.toString() === tokenId) continue; // No mostrar la carta actual
+                const bichoId = Number(await contrato.bichoAsignado(tid));
+                let nombre = `EtherBeast #${tid}`;
+                try {
+                    const resp = await fetch(`${METADATA_GATEWAY}/${bichoId}.json`);
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        nombre = data.name || nombre;
+                    }
+                } catch (e) { }
+                lista.push({
+                    tokenId: tid,
+                    bichoReal: bichoId,
+                    nombre,
+                    imagen: `${IPFS_GATEWAY}/${bichoId}.png`
+                });
+            }
+            setMisCartas(lista);
+        } catch (err) {
+            console.error("Error cargando mis cartas:", err);
+        } finally {
+            setCargandoMisCartas(false);
+        }
+    };
+
+    /**
+     * Enviar una oferta de ETH por este NFT
+     */
+    const enviarOfertaETH = async () => {
+        if (!montoOfertaETH || parseFloat(montoOfertaETH) <= 0) {
+            mostrarToast("Introduce un monto válido de ETH.", "error");
+            return;
+        }
+        setProcesandoOferta(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            mostrarToast("Enviando oferta de ETH...", "info");
+            const tx = await marketplace.crearOfertaETH(tokenId, {
+                value: ethers.parseEther(montoOfertaETH)
+            });
+            await tx.wait();
+
+            mostrarToast("¡Oferta de ETH enviada! 💰", "success");
+            setMostrarModalOferta(false);
+            setMontoOfertaETH('');
+        } catch (err) {
+            console.error("Error al enviar oferta ETH:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Oferta cancelada por el usuario.", "error");
+            } else {
+                mostrarToast("Error al enviar la oferta.", "error");
+            }
+        } finally {
+            setProcesandoOferta(false);
+        }
+    };
+
+    /**
+     * Enviar una oferta de intercambio de cartas
+     */
+    const enviarOfertaIntercambio = async () => {
+        if (cartasSeleccionadas.length === 0) {
+            mostrarToast("Selecciona al menos una carta para ofrecer.", "error");
+            return;
+        }
+        setProcesandoOferta(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+            const contratoCartas = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+
+            // Verificar si ya tiene aprobación global
+            const yaAprobado = await contratoCartas.isApprovedForAll(cuenta, MARKETPLACE_ADDRESS);
+            if (!yaAprobado) {
+                mostrarToast("Paso 1/2: Aprobando cartas para intercambio...", "info");
+                const txApprove = await contratoCartas.setApprovalForAll(MARKETPLACE_ADDRESS, true);
+                await txApprove.wait();
+            }
+
+            mostrarToast(yaAprobado ? "Enviando oferta de intercambio..." : "Paso 2/2: Enviando oferta de intercambio...", "info");
+            const tx = await marketplace.crearOfertaIntercambio(
+                cartasSeleccionadas,
+                [Number(tokenId)],
+                propietario
+            );
+            await tx.wait();
+
+            mostrarToast("¡Oferta de intercambio enviada! 🔄", "success");
+            setMostrarModalOferta(false);
+            setCartasSeleccionadas([]);
+        } catch (err) {
+            console.error("Error al enviar oferta de intercambio:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Oferta cancelada por el usuario.", "error");
+            } else {
+                mostrarToast("Error al enviar la oferta de intercambio.", "error");
+            }
+        } finally {
+            setProcesandoOferta(false);
+        }
+    };
+
+    /**
+     * Toggle selección de carta para intercambio
+     */
+    const toggleSeleccionCarta = (tid) => {
+        setCartasSeleccionadas(prev =>
+            prev.includes(tid) ? prev.filter(id => id !== tid) : [...prev, tid]
+        );
+    };
+
+    /**
+     * Abrir modal de oferta y cargar cartas del usuario
+     */
+    const abrirModalOferta = () => {
+        setMostrarModalOferta(true);
+        setTipoOferta('eth');
+        setMontoOfertaETH('');
+        setCartasSeleccionadas([]);
+        cargarMisCartas();
+    };
+
     if (cargando) {
         return (
             <div className="detalle-loading">
@@ -505,9 +653,12 @@ function DetalleNFT() {
                                         </button>
                                     )}
 
-                                    <button className="btn-accion comprador" disabled>
+                                    <button
+                                        className="btn-accion comprador activo oferta"
+                                        onClick={abrirModalOferta}
+                                        disabled={!cuenta || procesandoOferta}
+                                    >
                                         💬 Enviar Oferta
-                                        <span className="badge-pronto">Próximamente</span>
                                     </button>
 
                                     {/* Botón placeholder para igualar altura con panel del propietario */}
@@ -641,6 +792,107 @@ function DetalleNFT() {
                                 className="btn-cancelar-transferencia"
                                 onClick={() => setMostrarModalQuemar(false)}
                                 disabled={quemando}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Enviar Oferta */}
+            {mostrarModalOferta && (
+                <div className="modal-overlay" onClick={() => !procesandoOferta && setMostrarModalOferta(false)}>
+                    <div className="modal-transferencia modal-oferta" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="modal-titulo modal-titulo-oferta">💬 Enviar Oferta</h2>
+                        <p className="modal-subtitulo">
+                            Envía una oferta al propietario de <strong>{nombreNFT}</strong> (Token #{nft.id}).
+                        </p>
+
+                        {/* Tabs ETH / Intercambio */}
+                        <div className="oferta-tabs">
+                            <button
+                                className={`oferta-tab ${tipoOferta === 'eth' ? 'activo' : ''}`}
+                                onClick={() => setTipoOferta('eth')}
+                                disabled={procesandoOferta}
+                            >
+                                💰 Ofrecer ETH
+                            </button>
+                            <button
+                                className={`oferta-tab ${tipoOferta === 'intercambio' ? 'activo' : ''}`}
+                                onClick={() => setTipoOferta('intercambio')}
+                                disabled={procesandoOferta}
+                            >
+                                🔄 Intercambiar Cartas
+                            </button>
+                        </div>
+
+                        {/* Contenido según tipo */}
+                        {tipoOferta === 'eth' ? (
+                            <div className="oferta-contenido">
+                                <label className="modal-label">Monto a ofrecer (ETH)</label>
+                                <input
+                                    className="modal-input"
+                                    type="number"
+                                    step="0.001"
+                                    min="0"
+                                    placeholder="0.01"
+                                    value={montoOfertaETH}
+                                    onChange={(e) => setMontoOfertaETH(e.target.value)}
+                                    disabled={procesandoOferta}
+                                    autoFocus
+                                />
+                                <p className="oferta-hint">
+                                    El ETH quedará en custodia hasta que el propietario acepte o rechace tu oferta.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="oferta-contenido">
+                                <label className="modal-label">
+                                    Selecciona las cartas que ofreces ({cartasSeleccionadas.length} seleccionada{cartasSeleccionadas.length !== 1 ? 's' : ''})
+                                </label>
+                                {cargandoMisCartas ? (
+                                    <p className="oferta-hint">⏳ Cargando tu colección...</p>
+                                ) : misCartas.length === 0 ? (
+                                    <p className="oferta-hint">No tienes otras cartas para intercambiar.</p>
+                                ) : (
+                                    <div className="oferta-cartas-grid">
+                                        {misCartas.map((carta) => (
+                                            <div
+                                                key={carta.tokenId}
+                                                className={`oferta-carta-item ${cartasSeleccionadas.includes(carta.tokenId) ? 'seleccionada' : ''}`}
+                                                onClick={() => !procesandoOferta && toggleSeleccionCarta(carta.tokenId)}
+                                            >
+                                                <img src={carta.imagen} alt={carta.nombre} className="oferta-carta-img" />
+                                                <p className="oferta-carta-nombre">{carta.nombre}</p>
+                                                <p className="oferta-carta-id">#{carta.tokenId}</p>
+                                                {cartasSeleccionadas.includes(carta.tokenId) && (
+                                                    <div className="oferta-carta-check">✓</div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="modal-botones">
+                            <button
+                                className="btn-confirmar-oferta"
+                                onClick={tipoOferta === 'eth' ? enviarOfertaETH : enviarOfertaIntercambio}
+                                disabled={procesandoOferta || (tipoOferta === 'eth' ? !montoOfertaETH : cartasSeleccionadas.length === 0)}
+                            >
+                                {procesandoOferta
+                                    ? '⏳ Procesando...'
+                                    : tipoOferta === 'eth'
+                                        ? `💰 Enviar oferta de ${montoOfertaETH || '0'} ETH`
+                                        : `🔄 Ofrecer ${cartasSeleccionadas.length} carta${cartasSeleccionadas.length !== 1 ? 's' : ''}`
+                                }
+                            </button>
+                            <button
+                                className="btn-cancelar-transferencia"
+                                onClick={() => setMostrarModalOferta(false)}
+                                disabled={procesandoOferta}
                             >
                                 Cancelar
                             </button>
