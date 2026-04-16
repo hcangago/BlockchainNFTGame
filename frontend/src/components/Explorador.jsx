@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS, MARKETPLACE_ADDRESS, IPFS_GATEWAY, useWallet } from '../App';
@@ -36,6 +36,8 @@ function Explorador() {
     const [filtroPropietario, setFiltroPropietario] = useState('');
     const [filtroRareza, setFiltroRareza] = useState('Todas');
     const [ordenar, setOrdenar] = useState('id-asc'); // id-asc | id-desc | precio-asc | precio-desc | nombre-asc
+    const [tiempoActual, setTiempoActual] = useState(Math.floor(Date.now() / 1000));
+    const timerRef = useRef(null);
 
     useEffect(() => {
         const cargarTodasCartas = async () => {
@@ -89,6 +91,25 @@ function Explorador() {
                             }
                         }
 
+                        // Comprobar si tiene subasta activa
+                        let enSubasta = false;
+                        let subastaPujaActual = '0';
+                        let subastaFin = 0;
+                        try {
+                            const tieneSubasta = await marketplace.tokenTieneSubasta(tokenId);
+                            if (tieneSubasta) {
+                                const subastaId = Number(await marketplace.subastaActivaDeToken(tokenId));
+                                const [, , , pujaActualS, , , finS, activaS] = await marketplace.obtenerSubasta(subastaId);
+                                if (activaS) {
+                                    enSubasta = true;
+                                    subastaPujaActual = ethers.formatEther(pujaActualS);
+                                    subastaFin = Number(finS);
+                                }
+                            }
+                        } catch (e) {
+                            // Si falla, no tiene subasta
+                        }
+
                         // Obtener metadatos de IPFS
                         let nombre = `EtherBeast #${tokenId}`;
                         let tipo = '';
@@ -122,6 +143,9 @@ function Explorador() {
                             enVenta,
                             precio,
                             precioWei,
+                            enSubasta,
+                            subastaPujaActual,
+                            subastaFin,
                             imagen: `${IPFS_GATEWAY}/${bichoId}.png`
                         };
                     })
@@ -139,6 +163,24 @@ function Explorador() {
         cargarTodasCartas();
     }, []);
 
+    // Timer global para countdown de subastas
+    useEffect(() => {
+        timerRef.current = setInterval(() => {
+            setTiempoActual(Math.floor(Date.now() / 1000));
+        }, 1000);
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, []);
+
+    const formatearTimer = useCallback((fin) => {
+        const diff = fin - tiempoActual;
+        if (diff <= 0) return 'Expirada';
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
+        if (h > 0) return `${h}h ${m}m ${s}s`;
+        return `${m}m ${s}s`;
+    }, [tiempoActual]);
+
     // Filtrar y ordenar cartas
     const cartasFiltradas = useMemo(() => {
         let resultado = [...todasCartas];
@@ -146,8 +188,10 @@ function Explorador() {
         // Filtro por estado de venta
         if (filtroEstado === 'en-venta') {
             resultado = resultado.filter(c => c.enVenta);
+        } else if (filtroEstado === 'en-subasta') {
+            resultado = resultado.filter(c => c.enSubasta);
         } else if (filtroEstado === 'no-en-venta') {
-            resultado = resultado.filter(c => !c.enVenta);
+            resultado = resultado.filter(c => !c.enVenta && !c.enSubasta);
         }
 
         // Filtro por tipo de criatura
@@ -212,6 +256,7 @@ function Explorador() {
     }, [todasCartas, filtroEstado, filtroTipo, filtroRareza, filtroBusqueda, filtroPropietario, ordenar]);
 
     const totalEnVenta = todasCartas.filter(c => c.enVenta).length;
+    const totalEnSubasta = todasCartas.filter(c => c.enSubasta).length;
 
     const limpiarFiltros = () => {
         setFiltroEstado('todos');
@@ -282,6 +327,7 @@ function Explorador() {
                                 >
                                     <option value="todos">Todos</option>
                                     <option value="en-venta">En venta</option>
+                                    <option value="en-subasta">En subasta</option>
                                     <option value="no-en-venta">No en venta</option>
                                 </select>
                             </div>
@@ -349,7 +395,7 @@ function Explorador() {
                     {/* Contador */}
                     <p className="explorador-count">
                         Mostrando <strong>{cartasFiltradas.length}</strong> de <strong>{todasCartas.length}</strong> cartas
-                        {' '}({totalEnVenta} en venta)
+                        {' '}({totalEnVenta} en venta{totalEnSubasta > 0 ? `, ${totalEnSubasta} en subasta` : ''})
                     </p>
 
                     {/* Grid de Cartas */}
@@ -377,7 +423,16 @@ function Explorador() {
                                             onError={(e) => { e.target.src = ''; }}
                                         />
                                         {/* Badge de estado */}
-                                        {item.enVenta ? (
+                                        {item.enSubasta ? (
+                                            <div className="badge-estado badge-subasta">
+                                                🔨 {Number(item.subastaPujaActual) > 0
+                                                    ? `Ξ ${item.subastaPujaActual} ETH`
+                                                    : 'Sin pujas'}
+                                                <span className="badge-subasta-timer">
+                                                    ⏱️ {formatearTimer(item.subastaFin)}
+                                                </span>
+                                            </div>
+                                        ) : item.enVenta ? (
                                             <div className="badge-estado badge-en-venta">
                                                 🏷️ Ξ {item.precio} ETH
                                             </div>

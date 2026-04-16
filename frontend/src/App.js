@@ -13,7 +13,7 @@ import Explorador from './components/Explorador';
 import MisOfertas from './components/MisOfertas';
 
 export const CONTRACT_ADDRESS = "0x92ce1f50F2bE281F9943F983f5cFB1c8a1518C6e";
-export const MARKETPLACE_ADDRESS = "0x1A53d8E28a45ee0178F0a6F72F10Be8F202a7F3E";
+export const MARKETPLACE_ADDRESS = "0x14d6794eed717c8432d49a621B0D30797C3D57Bf";
 export const SEPOLIA_CHAIN_ID = '0xaa36a7';
 export const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/bafybeicwuguf2zsxwcs7p4zeiseea62kgeqwdgksvpexxno6ofajo4njci';
 

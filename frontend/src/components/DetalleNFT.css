@@ -1002,3 +1002,211 @@
   color: #555;
   font-style: italic;
 }
+
+/* =============================================
+   SUBASTAS — Estilos
+   ============================================= */
+
+/* === Badge panel de subasta === */
+.subasta-badge-panel {
+  background: linear-gradient(135deg, #2a1a3e, #3d2a5c) !important;
+  border-color: #9b59b6 !important;
+}
+
+.subasta-precio {
+  color: #c084fc !important;
+}
+
+.subasta-timer {
+  font-size: 13px;
+  color: #a78bfa;
+  font-family: 'Courier New', monospace;
+  margin-top: 4px;
+  animation: pulseSuave 2s ease-in-out infinite;
+}
+
+.subasta-timer.expirada {
+  color: #ff6b6b;
+  animation: none;
+}
+
+@keyframes pulseSuave {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* === Botón de subasta propietario === */
+.btn-accion.propietario.activo.subasta {
+  border-color: #9b59b6;
+  background: linear-gradient(135deg, #2a1a3e, #3d2a5c);
+}
+
+.btn-accion.propietario.activo.subasta:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3d2a5c, #5b3a8c);
+  box-shadow: 0 0 15px rgba(155, 89, 182, 0.4);
+  transform: translateY(-1px);
+}
+
+/* === Botón de subasta comprador === */
+.btn-accion.comprador.activo.subasta-btn {
+  opacity: 1;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2a1a3e, #3d2a5c);
+  border: 1px solid #9b59b6;
+}
+
+.btn-accion.comprador.activo.subasta-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3d2a5c, #5b3a8c);
+  box-shadow: 0 0 15px rgba(155, 89, 182, 0.4);
+  transform: translateY(-1px);
+}
+
+/* === Puja inline (dentro del panel comprador) === */
+.subasta-puja-inline {
+  background: #1a1a2e;
+  border: 1px solid #9b59b6;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.subasta-puja-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.subasta-puja-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subasta-puja-monto {
+  font-size: 16px;
+  font-weight: bold;
+  color: #c084fc;
+}
+
+.subasta-puja-reserva {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+}
+
+.subasta-puja-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.subasta-input-puja {
+  flex: 1;
+  font-size: 13px !important;
+}
+
+.btn-pujar {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #9b59b6, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-pujar:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(155, 89, 182, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-pujar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === Modal de Subasta === */
+.modal-subasta {
+  max-width: 520px;
+}
+
+.modal-titulo-subasta {
+  background: linear-gradient(135deg, #9b59b6, #c084fc) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* === Selector de duración === */
+.subasta-duracion-opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.subasta-duracion-btn {
+  padding: 7px 14px;
+  background: #1a1a2e;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.subasta-duracion-btn.activo {
+  background: linear-gradient(135deg, #2a1a3e, #3d2a5c);
+  border-color: #9b59b6;
+  color: #c084fc;
+}
+
+.subasta-duracion-btn:hover:not(:disabled):not(.activo) {
+  border-color: #666;
+  color: #ddd;
+}
+
+/* === Info resumen anti-snipe === */
+.subasta-info-resumen {
+  background: rgba(155, 89, 182, 0.1);
+  border: 1px solid rgba(155, 89, 182, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #c084fc;
+  font-size: 12px;
+  margin: 10px 0;
+}
+
+.subasta-info-resumen strong {
+  color: #d8b4fe;
+}
+
+/* === Botón confirmar subasta === */
+.btn-confirmar-subasta {
+  flex: 1;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #9b59b6, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-confirmar-subasta:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(155, 89, 182, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-confirmar-subasta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

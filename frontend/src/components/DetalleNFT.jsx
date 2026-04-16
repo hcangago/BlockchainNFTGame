@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import { useWallet, CONTRACT_ADDRESS, MARKETPLACE_ADDRESS, IPFS_GATEWAY } from '../App';
@@ -71,6 +71,16 @@ function DetalleNFT() {
     const [mostrarOfertas, setMostrarOfertas] = useState(true);
     const [procesandoAccionOferta, setProcesandoAccionOferta] = useState(false);
 
+    // Estado para subastas
+    const [subasta, setSubasta] = useState(null); // { subastaId, vendedor, precioMinimo, pujaActual, mejorPostor, fin, activa }
+    const [mostrarModalSubasta, setMostrarModalSubasta] = useState(false);
+    const [duracionSubasta, setDuracionSubasta] = useState('24');
+    const [precioMinimoSubasta, setPrecioMinimoSubasta] = useState('');
+    const [montoPuja, setMontoPuja] = useState('');
+    const [procesandoSubasta, setProcesandoSubasta] = useState(false);
+    const [tiempoRestante, setTiempoRestante] = useState('');
+    const timerRef = useRef(null);
+
     const cargarDatos = async () => {
         setCargando(true);
         setError('');
@@ -142,6 +152,39 @@ function DetalleNFT() {
             } catch (mktErr) {
                 console.warn("No se pudo consultar el marketplace:", mktErr);
                 setListado(null);
+            }
+
+            // Obtener subasta activa del token
+            try {
+                const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, provider);
+                const tieneSubasta = await marketplace.tokenTieneSubasta(tokenId);
+                if (tieneSubasta) {
+                    const subastaId = Number(await marketplace.subastaActivaDeToken(tokenId));
+                    const [vendedorS, , precioMinimoS, pujaActualS, mejorPostorS, inicioS, finS, activaS, finalizadaS] =
+                        await marketplace.obtenerSubasta(subastaId);
+                    if (activaS) {
+                        setSubasta({
+                            subastaId,
+                            vendedor: vendedorS.toLowerCase(),
+                            precioMinimo: ethers.formatEther(precioMinimoS),
+                            precioMinimoWei: precioMinimoS,
+                            pujaActual: ethers.formatEther(pujaActualS),
+                            pujaActualWei: pujaActualS,
+                            mejorPostor: mejorPostorS,
+                            inicio: Number(inicioS),
+                            fin: Number(finS),
+                            activa: true,
+                            finalizada: finalizadaS
+                        });
+                    } else {
+                        setSubasta(null);
+                    }
+                } else {
+                    setSubasta(null);
+                }
+            } catch (subErr) {
+                console.warn("No se pudo consultar subastas:", subErr);
+                setSubasta(null);
             }
 
             // Cargar ofertas para este NFT
@@ -535,6 +578,7 @@ function DetalleNFT() {
             mostrarToast("¡Oferta de ETH enviada! 💰", "success");
             setMostrarModalOferta(false);
             setMontoOfertaETH('');
+            cargarDatos(); // Recargar ofertas
         } catch (err) {
             console.error("Error al enviar oferta ETH:", err);
             if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
@@ -581,6 +625,7 @@ function DetalleNFT() {
             mostrarToast("¡Oferta de intercambio enviada! 🔄", "success");
             setMostrarModalOferta(false);
             setCartasSeleccionadas([]);
+            cargarDatos(); // Recargar ofertas
         } catch (err) {
             console.error("Error al enviar oferta de intercambio:", err);
             if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
@@ -612,6 +657,184 @@ function DetalleNFT() {
         setCartasSeleccionadas([]);
         cargarMisCartas();
     };
+
+    // ═══════════════════════════════════════════════════
+    // ██ FUNCIONES DE SUBASTA
+    // ═══════════════════════════════════════════════════
+
+    /**
+     * Crear una subasta para este NFT
+     */
+    const crearSubastaHandler = async () => {
+        const horas = parseInt(duracionSubasta);
+        if (!horas || horas < 1 || horas > 168) {
+            mostrarToast("La duración debe ser entre 1 y 168 horas.", "error");
+            return;
+        }
+        setProcesandoSubasta(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contratoCartas = new ethers.Contract(CONTRACT_ADDRESS, CartasABI.abi, signer);
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            // Paso 1: Aprobar al marketplace
+            mostrarToast("Paso 1/2: Aprobando al marketplace...", "info");
+            const txApprove = await contratoCartas.approve(MARKETPLACE_ADDRESS, tokenId);
+            await txApprove.wait();
+
+            // Paso 2: Crear subasta
+            mostrarToast("Paso 2/2: Creando subasta...", "info");
+            const precioMinWei = precioMinimoSubasta && parseFloat(precioMinimoSubasta) > 0
+                ? ethers.parseEther(precioMinimoSubasta)
+                : 0n;
+            const tx = await marketplace.crearSubasta(tokenId, precioMinWei, horas);
+            await tx.wait();
+
+            mostrarToast("¡Subasta creada exitosamente! 🔨", "success");
+            setMostrarModalSubasta(false);
+            setDuracionSubasta('24');
+            setPrecioMinimoSubasta('');
+            setTimeout(() => cargarDatos(), 2000);
+        } catch (err) {
+            console.error("Error al crear subasta:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Operación cancelada por el usuario.", "error");
+            } else {
+                mostrarToast(`Error al crear la subasta: ${err.reason || err.message || 'Error desconocido'}`, "error");
+            }
+        } finally {
+            setProcesandoSubasta(false);
+        }
+    };
+
+    /**
+     * Realizar una puja en la subasta activa
+     */
+    const pujarHandler = async () => {
+        if (!montoPuja || parseFloat(montoPuja) <= 0) {
+            mostrarToast("Introduce un monto válido de ETH.", "error");
+            return;
+        }
+        if (!subasta) return;
+
+        setProcesandoSubasta(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            mostrarToast("Enviando puja...", "info");
+            const tx = await marketplace.pujar(subasta.subastaId, {
+                value: ethers.parseEther(montoPuja)
+            });
+            await tx.wait();
+
+            mostrarToast("¡Puja realizada exitosamente! 🎯", "success");
+            setMontoPuja('');
+            setTimeout(() => cargarDatos(), 2000);
+        } catch (err) {
+            console.error("Error al pujar:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Puja cancelada por el usuario.", "error");
+            } else {
+                mostrarToast(`Error al pujar: ${err.reason || err.message || 'Error desconocido'}`, "error");
+            }
+        } finally {
+            setProcesandoSubasta(false);
+        }
+    };
+
+    /**
+     * Finalizar subasta expirada
+     */
+    const finalizarSubastaHandler = async () => {
+        if (!subasta) return;
+        setProcesandoSubasta(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            mostrarToast("Finalizando subasta...", "info");
+            const tx = await marketplace.finalizarSubasta(subasta.subastaId);
+            await tx.wait();
+
+            mostrarToast("¡Subasta finalizada! 🏆", "success");
+            setTimeout(() => cargarDatos(), 2000);
+        } catch (err) {
+            console.error("Error al finalizar subasta:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Operación cancelada por el usuario.", "error");
+            } else {
+                mostrarToast(`Error: ${err.reason || err.message || 'Error desconocido'}`, "error");
+            }
+        } finally {
+            setProcesandoSubasta(false);
+        }
+    };
+
+    /**
+     * Cancelar subasta (solo si no hay pujas)
+     */
+    const cancelarSubastaHandler = async () => {
+        if (!subasta) return;
+        setProcesandoSubasta(true);
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const marketplace = new ethers.Contract(MARKETPLACE_ADDRESS, MarketplaceABI.abi, signer);
+
+            mostrarToast("Cancelando subasta...", "info");
+            const tx = await marketplace.cancelarSubasta(subasta.subastaId);
+            await tx.wait();
+
+            mostrarToast("Subasta cancelada. 🔨", "success");
+            setTimeout(() => cargarDatos(), 2000);
+        } catch (err) {
+            console.error("Error al cancelar subasta:", err);
+            if (err.code === 'ACTION_REJECTED' || err.code === 4001) {
+                mostrarToast("Operación cancelada por el usuario.", "error");
+            } else {
+                mostrarToast(`Error: ${err.reason || err.message || 'Error desconocido'}`, "error");
+            }
+        } finally {
+            setProcesandoSubasta(false);
+        }
+    };
+
+    /**
+     * Formatear tiempo restante de subasta
+     */
+    const formatearTiempoRestante = useCallback((finTimestamp) => {
+        const ahora = Math.floor(Date.now() / 1000);
+        const diff = finTimestamp - ahora;
+        if (diff <= 0) return 'Expirada';
+
+        const dias = Math.floor(diff / 86400);
+        const horas = Math.floor((diff % 86400) / 3600);
+        const minutos = Math.floor((diff % 3600) / 60);
+        const segundos = diff % 60;
+
+        if (dias > 0) return `${dias}d ${horas}h ${minutos}m`;
+        if (horas > 0) return `${horas}h ${minutos}m ${segundos}s`;
+        return `${minutos}m ${segundos}s`;
+    }, []);
+
+    // Timer de countdown para subasta activa
+    useEffect(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (!subasta || !subasta.activa) {
+            setTiempoRestante('');
+            return;
+        }
+        const actualizar = () => {
+            setTiempoRestante(formatearTiempoRestante(subasta.fin));
+        };
+        actualizar();
+        timerRef.current = setInterval(actualizar, 1000);
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [subasta, formatearTiempoRestante]);
 
     if (cargando) {
         return (
@@ -699,9 +922,23 @@ function DetalleNFT() {
                             {esPropietario ? '🔑 Panel del Propietario' : '🛒 Opciones de Adquisición'}
                         </p>
 
-                        {/* Área de precio — siempre reserva espacio */}
+                        {/* Área de precio / subasta — siempre reserva espacio */}
                         <div className="listado-precio-container">
-                            {listado && listado.activo ? (
+                            {subasta && subasta.activa ? (
+                                <div className="listado-activo-badge subasta-badge-panel">
+                                    <p className="listado-label">🔨 En subasta</p>
+                                    <p className="listado-precio subasta-precio">
+                                        {Number(subasta.pujaActual) > 0
+                                            ? `Ξ ${subasta.pujaActual} ETH`
+                                            : Number(subasta.precioMinimo) > 0
+                                                ? `Desde Ξ ${subasta.precioMinimo} ETH`
+                                                : 'Sin pujas aún'}
+                                    </p>
+                                    <p className={`subasta-timer ${tiempoRestante === 'Expirada' ? 'expirada' : ''}`}>
+                                        ⏱️ {tiempoRestante}
+                                    </p>
+                                </div>
+                            ) : listado && listado.activo ? (
                                 <div className={`listado-activo-badge ${esPropietario ? '' : 'comprador'}`}>
                                     <p className="listado-label">
                                         {esPropietario ? '🏷️ En venta por' : '🏷️ Precio de venta'}
@@ -723,7 +960,7 @@ function DetalleNFT() {
                                     <button
                                         className="btn-accion propietario activo"
                                         onClick={() => setMostrarModalTransferencia(true)}
-                                        disabled={listado?.activo}
+                                        disabled={listado?.activo || subasta?.activa}
                                     >
                                         📤 Transferir a otro usuario
                                     </button>
@@ -740,28 +977,102 @@ function DetalleNFT() {
                                         <button
                                             className="btn-accion propietario activo"
                                             onClick={() => setMostrarModalListar(true)}
-                                            disabled={procesandoMarketplace}
+                                            disabled={procesandoMarketplace || subasta?.activa}
                                         >
                                             🏷️ Listar para Venta
                                         </button>
                                     )}
 
-                                    <button className="btn-accion propietario" disabled>
-                                        🔨 Iniciar Subasta
-                                        <span className="badge-pronto">Próximamente</span>
-                                    </button>
+                                    {subasta && subasta.activa ? (
+                                        tiempoRestante === 'Expirada' ? (
+                                            <button
+                                                className="btn-accion propietario activo subasta"
+                                                onClick={finalizarSubastaHandler}
+                                                disabled={procesandoSubasta}
+                                            >
+                                                {procesandoSubasta ? '⏳ Finalizando...' : '🏆 Finalizar Subasta'}
+                                            </button>
+                                        ) : (
+                                            subasta.mejorPostor === '0x0000000000000000000000000000000000000000' ? (
+                                                <button
+                                                    className="btn-accion propietario activo cancelar"
+                                                    onClick={cancelarSubastaHandler}
+                                                    disabled={procesandoSubasta}
+                                                >
+                                                    {procesandoSubasta ? '⏳ Cancelando...' : '❌ Cancelar Subasta'}
+                                                </button>
+                                            ) : (
+                                                <button className="btn-accion propietario" disabled>
+                                                    🔨 Subasta en curso
+                                                </button>
+                                            )
+                                        )
+                                    ) : (
+                                        <button
+                                            className="btn-accion propietario activo subasta"
+                                            onClick={() => setMostrarModalSubasta(true)}
+                                            disabled={listado?.activo || procesandoSubasta}
+                                        >
+                                            🔨 Iniciar Subasta
+                                        </button>
+                                    )}
 
                                     <button
                                         className="btn-accion propietario activo quemar"
                                         onClick={() => setMostrarModalQuemar(true)}
-                                        disabled={listado?.activo}
+                                        disabled={listado?.activo || subasta?.activa}
                                     >
                                         🔥 Quemar Carta
                                     </button>
                                 </>
                             ) : (
                                 <>
-                                    {listado && listado.activo ? (
+                                    {subasta && subasta.activa ? (
+                                        tiempoRestante === 'Expirada' ? (
+                                            <button
+                                                className="btn-accion comprador activo subasta-btn"
+                                                onClick={finalizarSubastaHandler}
+                                                disabled={!cuenta || procesandoSubasta}
+                                            >
+                                                {procesandoSubasta ? '⏳ Finalizando...' : '🏆 Finalizar Subasta'}
+                                            </button>
+                                        ) : (
+                                            <div className="subasta-puja-inline">
+                                                <div className="subasta-puja-info">
+                                                    <span className="subasta-puja-label">Puja actual:</span>
+                                                    <span className="subasta-puja-monto">
+                                                        {Number(subasta.pujaActual) > 0 ? `Ξ ${subasta.pujaActual} ETH` : 'Sin pujas'}
+                                                    </span>
+                                                    {Number(subasta.precioMinimo) > 0 && Number(subasta.pujaActual) === 0 && (
+                                                        <span className="subasta-puja-reserva">Mín: {subasta.precioMinimo} ETH</span>
+                                                    )}
+                                                </div>
+                                                <div className="subasta-puja-input-row">
+                                                    <input
+                                                        className="modal-input subasta-input-puja"
+                                                        type="number"
+                                                        step="0.001"
+                                                        min="0"
+                                                        placeholder={Number(subasta.pujaActual) > 0
+                                                            ? `> ${subasta.pujaActual}`
+                                                            : Number(subasta.precioMinimo) > 0
+                                                                ? `≥ ${subasta.precioMinimo}`
+                                                                : '0.01'}
+                                                        value={montoPuja}
+                                                        onChange={(e) => setMontoPuja(e.target.value)}
+                                                        disabled={procesandoSubasta}
+                                                    />
+                                                    <button
+                                                        className="btn-pujar"
+                                                        onClick={pujarHandler}
+                                                        disabled={!cuenta || procesandoSubasta || !montoPuja}
+                                                    >
+                                                        {procesandoSubasta ? '⏳' : '🔨 Pujar'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )
+                                    ) : listado && listado.activo ? (
                                         <button
                                             className="btn-accion comprador activo"
                                             onClick={comprarNFT}
@@ -1017,6 +1328,86 @@ function DetalleNFT() {
                                 className="btn-cancelar-transferencia"
                                 onClick={() => setMostrarModalOferta(false)}
                                 disabled={procesandoOferta}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Crear Subasta */}
+            {mostrarModalSubasta && (
+                <div className="modal-overlay" onClick={() => !procesandoSubasta && setMostrarModalSubasta(false)}>
+                    <div className="modal-transferencia modal-subasta" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="modal-titulo modal-titulo-subasta">🔨 Iniciar Subasta</h2>
+                        <p className="modal-subtitulo">
+                            Vas a subastar <strong>{nombreNFT}</strong> (Token #{nft.id}).
+                            Los compradores podrán pujar durante el tiempo establecido.
+                        </p>
+
+                        <label className="modal-label">Duración (horas)</label>
+                        <div className="subasta-duracion-opciones">
+                            {[1, 6, 12, 24, 48, 72, 168].map(h => (
+                                <button
+                                    key={h}
+                                    className={`subasta-duracion-btn ${duracionSubasta === String(h) ? 'activo' : ''}`}
+                                    onClick={() => setDuracionSubasta(String(h))}
+                                    disabled={procesandoSubasta}
+                                >
+                                    {h < 24 ? `${h}h` : `${h / 24}d`}
+                                </button>
+                            ))}
+                        </div>
+                        <input
+                            className="modal-input"
+                            type="number"
+                            min="1"
+                            max="168"
+                            placeholder="O introduce horas manualmente"
+                            value={duracionSubasta}
+                            onChange={(e) => setDuracionSubasta(e.target.value)}
+                            disabled={procesandoSubasta}
+                        />
+
+                        <label className="modal-label" style={{ marginTop: '16px' }}>
+                            Precio mínimo / reserva (ETH) — Opcional
+                        </label>
+                        <input
+                            className="modal-input"
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="0 = sin precio mínimo"
+                            value={precioMinimoSubasta}
+                            onChange={(e) => setPrecioMinimoSubasta(e.target.value)}
+                            disabled={procesandoSubasta}
+                        />
+                        <p className="oferta-hint">
+                            Si estableces un precio mínimo, la subasta solo se completará si la puja más alta lo alcanza.
+                            Si no se alcanza, el NFT se devuelve al propietario.
+                        </p>
+
+                        <div className="subasta-info-resumen">
+                            ⚡ <strong>Anti-snipe:</strong> Si alguien puja en los últimos 5 minutos, el tiempo se extiende 5 minutos más.
+                        </div>
+
+                        <div className="modal-botones">
+                            <button
+                                className="btn-confirmar-subasta"
+                                onClick={crearSubastaHandler}
+                                disabled={procesandoSubasta || !duracionSubasta}
+                            >
+                                {procesandoSubasta ? '⏳ Procesando...' : '🔨 Crear Subasta'}
+                            </button>
+                            <button
+                                className="btn-cancelar-transferencia"
+                                onClick={() => {
+                                    setMostrarModalSubasta(false);
+                                    setDuracionSubasta('24');
+                                    setPrecioMinimoSubasta('');
+                                }}
+                                disabled={procesandoSubasta}
                             >
                                 Cancelar
                             </button>

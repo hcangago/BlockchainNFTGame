@@ -36,6 +36,19 @@ contract Marketplace is ReentrancyGuard {
         bool activa;
     }
 
+    // ── Tipos: Subastas ───────────────────────────────────
+    struct Subasta {
+        address vendedor;
+        uint256 tokenId;
+        uint256 precioMinimo;       // Precio de reserva (0 = sin reserva)
+        uint256 pujaActual;         // Monto de la puja más alta
+        address mejorPostor;        // Dirección del mejor postor
+        uint256 inicio;             // Timestamp de inicio
+        uint256 fin;                // Timestamp de finalización
+        bool activa;                // ¿La subasta está activa?
+        bool finalizada;            // ¿Se ha reclamado el resultado?
+    }
+
     // ── Estado ─────────────────────────────────────────────
     IERC721 public immutable nftContrato;
 
@@ -52,6 +65,13 @@ contract Marketplace is ReentrancyGuard {
     // Ofertas de Intercambio
     uint256 public nextOfertaIntercambioId;
     mapping(uint256 => OfertaIntercambio) public ofertasIntercambio;
+
+    // Subastas
+    uint256 public nextSubastaId;
+    mapping(uint256 => Subasta) public subastas;
+    mapping(uint256 => uint256) public subastaActivaDeToken; // tokenId => subastaId
+    mapping(uint256 => bool) public tokenTieneSubasta;       // tokenId => tiene subasta activa
+    uint256 public constant EXTENSION_ANTISNIPE = 5 minutes;
 
     // ── Eventos ────────────────────────────────────────────
     // Venta directa
@@ -70,6 +90,12 @@ contract Marketplace is ReentrancyGuard {
     event OfertaIntercambioAceptada(uint256 indexed ofertaId);
     event OfertaIntercambioCancelada(uint256 indexed ofertaId);
     event OfertaIntercambioRechazada(uint256 indexed ofertaId);
+
+    // Subastas
+    event SubastaCreada(uint256 indexed subastaId, address indexed vendedor, uint256 indexed tokenId, uint256 precioMinimo, uint256 fin);
+    event PujaRealizada(uint256 indexed subastaId, address indexed postor, uint256 monto);
+    event SubastaFinalizada(uint256 indexed subastaId, address ganador, uint256 montoFinal);
+    event SubastaCancelada(uint256 indexed subastaId);
 
     // ── Constructor ────────────────────────────────────────
     constructor(address _nftContrato) {
@@ -91,6 +117,7 @@ contract Marketplace is ReentrancyGuard {
             "El marketplace no tiene aprobacion"
         );
         require(!listados[tokenId].activo, "Ya esta listado");
+        require(!tokenTieneSubasta[tokenId], "El token tiene una subasta activa");
 
         listados[tokenId] = Listado({
             vendedor: msg.sender,
@@ -450,5 +477,165 @@ contract Marketplace is ReentrancyGuard {
                 emit OfertaETHCancelada(oid);
             }
         }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // ██ SUBASTAS
+    // ════════════════════════════════════════════════════════
+
+    /// @notice Crea una subasta para un NFT.
+    /// @param tokenId El token a subastar.
+    /// @param precioMinimo Precio de reserva en wei (0 = sin reserva).
+    /// @param duracionHoras Duración de la subasta en horas (mín. 1, máx. 168).
+    function crearSubasta(uint256 tokenId, uint256 precioMinimo, uint256 duracionHoras) external {
+        require(duracionHoras >= 1 && duracionHoras <= 168, "Duracion: entre 1 y 168 horas");
+        require(nftContrato.ownerOf(tokenId) == msg.sender, "No eres el propietario");
+        require(
+            nftContrato.getApproved(tokenId) == address(this) ||
+                nftContrato.isApprovedForAll(msg.sender, address(this)),
+            "El marketplace no tiene aprobacion"
+        );
+        require(!listados[tokenId].activo, "El token esta listado para venta");
+        require(!tokenTieneSubasta[tokenId], "Ya tiene una subasta activa");
+
+        uint256 subastaId = nextSubastaId++;
+        uint256 finSubasta = block.timestamp + (duracionHoras * 1 hours);
+
+        subastas[subastaId] = Subasta({
+            vendedor: msg.sender,
+            tokenId: tokenId,
+            precioMinimo: precioMinimo,
+            pujaActual: 0,
+            mejorPostor: address(0),
+            inicio: block.timestamp,
+            fin: finSubasta,
+            activa: true,
+            finalizada: false
+        });
+
+        subastaActivaDeToken[tokenId] = subastaId;
+        tokenTieneSubasta[tokenId] = true;
+
+        emit SubastaCreada(subastaId, msg.sender, tokenId, precioMinimo, finSubasta);
+    }
+
+    /// @notice Realiza una puja en una subasta activa.
+    /// @param subastaId El ID de la subasta.
+    function pujar(uint256 subastaId) external payable nonReentrant {
+        Subasta storage sub = subastas[subastaId];
+        require(sub.activa, "Subasta no activa");
+        require(block.timestamp < sub.fin, "La subasta ha expirado");
+        require(msg.sender != sub.vendedor, "No puedes pujar en tu propia subasta");
+        require(msg.value > sub.pujaActual, "La puja debe superar la actual");
+        if (sub.precioMinimo > 0) {
+            require(msg.value >= sub.precioMinimo, "Puja inferior al precio minimo");
+        }
+
+        // Devolver ETH al postor anterior si existe
+        address postorAnterior = sub.mejorPostor;
+        uint256 montoAnterior = sub.pujaActual;
+
+        // Actualizar puja
+        sub.pujaActual = msg.value;
+        sub.mejorPostor = msg.sender;
+
+        // Extension anti-snipe: si quedan menos de 5 minutos, extender
+        if (sub.fin - block.timestamp < EXTENSION_ANTISNIPE) {
+            sub.fin = block.timestamp + EXTENSION_ANTISNIPE;
+        }
+
+        // Devolver ETH al postor anterior
+        if (postorAnterior != address(0) && montoAnterior > 0) {
+            (bool devuelto, ) = payable(postorAnterior).call{value: montoAnterior}("");
+            require(devuelto, "Fallo al devolver ETH al postor anterior");
+        }
+
+        emit PujaRealizada(subastaId, msg.sender, msg.value);
+    }
+
+    /// @notice Finaliza una subasta expirada. Transfiere NFT y ETH o devuelve el NFT.
+    /// @param subastaId El ID de la subasta.
+    function finalizarSubasta(uint256 subastaId) external nonReentrant {
+        Subasta storage sub = subastas[subastaId];
+        require(sub.activa, "Subasta no activa");
+        require(block.timestamp >= sub.fin, "La subasta aun no ha expirado");
+        require(!sub.finalizada, "Ya fue finalizada");
+
+        sub.activa = false;
+        sub.finalizada = true;
+        tokenTieneSubasta[sub.tokenId] = false;
+
+        // Cancelar ofertas ETH pendientes sobre este token
+        _cancelarOfertasETHPendientes(sub.tokenId, type(uint256).max);
+
+        bool hayGanador = sub.mejorPostor != address(0) && sub.pujaActual > 0;
+        bool cumpleReserva = sub.precioMinimo == 0 || sub.pujaActual >= sub.precioMinimo;
+
+        if (hayGanador && cumpleReserva) {
+            // Transferir NFT al ganador
+            nftContrato.transferFrom(sub.vendedor, sub.mejorPostor, sub.tokenId);
+
+            // Enviar ETH al vendedor
+            (bool enviado, ) = payable(sub.vendedor).call{value: sub.pujaActual}("");
+            require(enviado, "Fallo al enviar ETH al vendedor");
+
+            emit SubastaFinalizada(subastaId, sub.mejorPostor, sub.pujaActual);
+        } else {
+            // No hubo ganador o no se alcanzo la reserva: devolver ETH si habia postor
+            if (sub.mejorPostor != address(0) && sub.pujaActual > 0) {
+                (bool devuelto, ) = payable(sub.mejorPostor).call{value: sub.pujaActual}("");
+                require(devuelto, "Fallo al devolver ETH al postor");
+            }
+
+            emit SubastaFinalizada(subastaId, address(0), 0);
+        }
+    }
+
+    /// @notice El vendedor cancela la subasta (solo si no tiene pujas).
+    /// @param subastaId El ID de la subasta.
+    function cancelarSubasta(uint256 subastaId) external {
+        Subasta storage sub = subastas[subastaId];
+        require(sub.activa, "Subasta no activa");
+        require(sub.vendedor == msg.sender, "No eres el vendedor");
+        require(sub.mejorPostor == address(0), "No se puede cancelar con pujas activas");
+
+        sub.activa = false;
+        sub.finalizada = true;
+        tokenTieneSubasta[sub.tokenId] = false;
+
+        emit SubastaCancelada(subastaId);
+    }
+
+    // ── Consultas de Subasta ──────────────────────────────
+
+    /// @notice Obtiene los detalles completos de una subasta.
+    function obtenerSubasta(uint256 subastaId) external view returns (
+        address vendedor,
+        uint256 tokenId,
+        uint256 precioMinimo,
+        uint256 pujaActual,
+        address mejorPostor,
+        uint256 inicio,
+        uint256 fin,
+        bool activa,
+        bool finalizada
+    ) {
+        Subasta memory s = subastas[subastaId];
+        return (
+            s.vendedor,
+            s.tokenId,
+            s.precioMinimo,
+            s.pujaActual,
+            s.mejorPostor,
+            s.inicio,
+            s.fin,
+            s.activa,
+            s.finalizada
+        );
+    }
+
+    /// @notice Devuelve el total de subastas creadas.
+    function totalSubastas() external view returns (uint256) {
+        return nextSubastaId;
     }
 }
