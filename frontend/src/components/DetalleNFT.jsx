@@ -848,7 +848,7 @@ function DetalleNFT() {
     if (error || !nft) {
         return (
             <div className="detalle-container">
-                <button className="btn-volver" onClick={() => navigate('/')}>← Volver a la colección</button>
+                <button className="btn-volver" onClick={() => navigate(-1)}>← Volver</button>
                 <div className="detalle-error">❌ {error || "NFT no encontrado"}</div>
             </div>
         );
@@ -863,8 +863,8 @@ function DetalleNFT() {
     return (
         <div className="detalle-container">
             {/* Botón volver */}
-            <button className="btn-volver" onClick={() => navigate('/')}>
-                ← Volver a la colección
+            <button className="btn-volver" onClick={() => navigate(-1)}>
+                ← Volver
             </button>
 
             <div className="detalle-layout">
